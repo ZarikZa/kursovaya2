@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Профиль компании - ProHR{% endblock %}
+
+{% block style %}
+    {% include '_inc/style.html' %}
+    {% include '_inc/style_prof.html' %}
+{% endblock %}
+
+{%block header%}
+    {%include '_inc/header.html'%}
+{%endblock%}
+{% block content %}
+<div class="profile-section">
+    <div class="profile-container">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    {{ company.name|first }}
+                </div>
+                <div class="profile-info">
+                    <h1>{{ company.name }}</h1>
+                    <div class="email">{{ user.email }}</div>
+                </div>
+                <div class="profile-actions">
+                    <a href="{% url 'edit_company_profile' %}" class="btn btn-primary">Редактировать профиль</a>
+                </div>
+            </div>
+            
+            <div class="profile-details">
+                <div class="detail-item" style="--index: 1">
+                    <div class="detail-label">ИНН</div>
+                    <div class="detail-value">{{ company.number }}</div>
+                </div>
+                <div class="detail-item" style="--index: 2">
+                    <div class="detail-label">Сфера деятельности</div>
+                    <div class="detail-value">{{ company.industry }}</div>
+                </div>
+                <div class="detail-item" style="--index: 3">
+                    <div class="detail-label">Дата регистрации</div>
+                    <div class="detail-value">{{ user.date_joined|date:"d.m.Y" }}</div>
+                </div>
+                <div class="detail-item" style="--index: 4">
+                    <div class="detail-label">Телефон</div>
+                    <div class="detail-value">{{ user.phone }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Секции вакансий и сотрудников -->
+        <div class="profile-sections">
+            <!-- Активные вакансии -->
+            <div class="section-card">
+                <h3>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                    </svg>
+                    Активные вакансии
+                </h3>
+                
+                {% if vacancies %}
+                    {% for vacancy in vacancies %}
+                    <div class="favorite-item">
+                        <div class="vacancy-title">{{ vacancy.position }}</div>
+                        <div class="vacancy-salary">{{ vacancy.salary_min|floatformat:"0" }} - {{ vacancy.salary_max|floatformat:"0" }} ₽</div>
+                        <div class="response-status status-{{ vacancy.status.status_vacancies_name|lower }}">
+                            {{ vacancy.status.status_vacancies_name }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                        </svg>
+                        <p>У вас пока нет активных вакансий</p>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Сотрудники -->
+            <div class="section-card">
+                <h3>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.74"></path>
+                    </svg>
+                    Сотрудники
+                </h3>
+                
+                {% if employees %}
+                    {% for employee in employees %}
+                    <div class="response-item">
+                        <div class="vacancy-title">{{ employee.first_name }} {{ employee.last_name }}</div>
+                        <div class="vacancy-company">{{ employee.role.role_name }}</div>
+                        <div class="response-status status-{{ employee.access_level|lower }}">
+                            {{ employee.access_level }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.74"></path>
+                        </svg>
+                        <p>У вас пока нет сотрудников</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

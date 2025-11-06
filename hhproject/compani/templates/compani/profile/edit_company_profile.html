@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Редактирование профиля компании - ProHR{% endblock %}
+
+{% block style %}
+    {% include '_inc/style.html' %}
+    {% include '_inc/style_prof.html' %}
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            width: 400px;
+            color: white;
+            border: 1px solid var(--glass-border);
+        }
+        .close {
+            float: right;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+{% endblock %}
+{%block header%}
+    {%include '_inc/header.html'%}
+{%endblock%}
+{% block content %}
+<div class="profile-section">
+    <div class="profile-container">
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    {{ company.name|first }}
+                </div>
+                <div class="profile-info">
+                    <h1>Редактирование профиля</h1>
+                </div>
+            </div>
+            
+            <!-- Отображение сообщений -->
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            
+            <div class="profile-details">
+                <form method="post" action="{% url 'verify_password_and_save' %}" id="profileForm">
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="detail-item" style="--index: {{ forloop.counter }}">
+                            <div class="detail-label">{{ field.label }}</div>
+                            <div class="detail-value">
+                                {{ field }}
+                                {% if field.errors %}
+                                    <ul class="errorlist">
+                                        {% for error in field.errors %}
+                                            <li>{{ error }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                     <div class="profile-actions">
+                        <button type="button" class="btn btn-primary" id="saveButton">Сохранить изменения</button>
+                        <a href="{% url 'company_profile' %}" class="btn btn-secondary">Отмена</a>
+                        <a href="{% url 'change_password_request' %}" class="btn btn-accent">Сменить пароль</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Подтверждение изменений</h2>
+            <p>Введите текущий пароль для сохранения изменений:</p>
+            <form method="post" action="{% url 'verify_password_and_save' %}" id="passwordForm">
+                {% csrf_token %}
+                <input type="password" name="current_password" placeholder="Текущий пароль" required>
+                <div id="hiddenFields"></div>
+                <button type="submit" class="btn btn-primary">Подтвердить</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const saveButton = document.getElementById('saveButton');
+        const modal = document.getElementById('passwordModal');
+        const closeModal = document.querySelector('.close');
+        const profileForm = document.getElementById('profileForm');
+        const passwordForm = document.getElementById('passwordForm');
+        const hiddenFields = document.getElementById('hiddenFields');
+
+        // Открытие модального окна при клике на "Сохранить изменения"
+        saveButton.addEventListener('click', function() {
+            const formData = new FormData(profileForm);
+            hiddenFields.innerHTML = ''; // Очищаем предыдущие скрытые поля
+            console.log('Form data to be sent:'); // Отладка
+            for (let [key, value] of formData.entries()) {
+                if (key !== 'csrfmiddlewaretoken') {
+                    console.log(`${key}: ${value}`); // Логируем данные формы
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = key;
+                    input.value = value;
+                    hiddenFields.appendChild(input);
+                }
+            }
+            modal.style.display = 'flex'; // Показываем модальное окно
+        });
+
+        // Закрытие модального окна при клике на крестик
+        closeModal.addEventListener('click', function() {
+            modal.style.display = 'none';
+        });
+
+        // Закрытие модального окна при клике вне его
+        window.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Отладка отправки формы passwordForm
+        passwordForm.addEventListener('submit', function(event) {
+            console.log('Password form submitted');
+            const formData = new FormData(passwordForm);
+            console.log('Password form data:');
+            for (let [key, value] of formData.entries()) {
+                console.log(`${key}: ${value}`);
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Регистрация - CareerHub{% endblock %}
+
+{% block style %}
+    {% include '_inc/style_for_register.html'%}
+    {% include '_inc/style.html'%}
+{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <section class="register-section">
+        <div class="container">
+            <div class="register-container">
+                <h2>Создать аккаунт</h2>
+                <form method="post" action="{% url 'registration_user' %}">
+                    {% csrf_token %}
+                    
+                    <div class="form-group" style="--index: 1;">
+                        <label for="id_first_name">Имя</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.first_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group" style="--index: 2;">
+                        <label for="id_last_name">Фамилия</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.last_name.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group" style="--index: 3;">
+                        <label for="id_phone">Телефон</label>
+                        {{ form.phone }}
+                        {% if form.phone.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.phone.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group" style="--index: 3;">
+                        <label for="id_email">Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.email.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group" style="--index: 4;">
+                        <label for="id_birth_date">Дата рождения</label>
+                        {{ form.birth_date }}
+                        {% if form.birth_date.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.birth_date.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group" style="--index: 5;">
+                        <label for="id_password1">Пароль</label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.password1.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group" style="--index: 6;">
+                        <label for="id_password2">Подтверждение пароля</label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.password2.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+                </form>
+            </div>
+            <a href="{% url 'login_user' %}" class="login-link">Уже есть аккаунт? Войти</a>
+        </div>
+    </section>
+</div>
+{% endblock %}

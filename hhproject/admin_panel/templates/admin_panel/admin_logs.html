@@ -1,0 +1,191 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title_name %}Логи действий - Админ панель{% endblock %}
+
+{% block style %}
+        {% include '_inc/style.html' %}
+        {% include '_inc/style_admin.html' %}
+    {% endblock %}
+
+{% block admin_content %}
+<div class="admin-content-header">
+    <h1>Логи действий</h1>
+    <p>История действий администраторов</p>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Фильтры</h3>
+    </div>
+    <div class="admin-card-body">
+        <form method="get" class="filter-form">
+            <div class="filter-grid">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Тип действия:</label>
+                    <select name="action" class="admin-form-control">
+                        <option value="">Все действия</option>
+                        {% for action_value, action_label in action_choices %}
+                        <option value="{{ action_value }}" {% if current_action == action_value %}selected{% endif %}>
+                            {{ action_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Поиск:</label>
+                    <input type="text" name="search" value="{{ search_query }}" class="admin-form-control" placeholder="Поиск по описанию...">
+                </div>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">&nbsp;</label>
+                    <button type="submit" class="btn-admin btn-admin-primary">
+                        Применить фильтры
+                    </button>
+                    <a href="{% url 'admin_logs' %}" class="btn-admin btn-admin-warning">
+                        Сбросить
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Очистка логов -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Очистка логов</h3>
+    </div>
+    <div class="admin-card-body">
+        <form method="post" action="{% url 'admin_clear_logs' %}">
+            {% csrf_token %}
+            <div class="admin-form-group">
+                <label class="admin-form-label">Удалить логи старше:</label>
+                <select name="days_old" class="admin-form-control" style="width: auto; display: inline-block;">
+                    <option value="7">7 дней</option>
+                    <option value="30" selected>30 дней</option>
+                    <option value="90">90 дней</option>
+                    <option value="365">1 года</option>
+                </select>
+            </div>
+            <button type="submit" class="btn-admin btn-admin-danger" onclick="return confirm('Вы уверены что хотите удалить старые логи?')">
+                Очистить логи
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Список логов -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>История действий ({{ logs.count }})</h3>
+    </div>
+    <div class="admin-card-body">
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Дата и время</th>
+                        <th>Администратор</th>
+                        <th>Действие</th>
+                        <th>Компания</th>
+                        <th>Описание</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.created_at|date:"d.m.Y H:i" }}</td>
+                        <td>
+                            <strong>{{ log.admin.username }}</strong>
+                            <div class="text-muted">{{ log.admin.email }}</div>
+                        </td>
+                        <td>
+                            <span class="action-badge action-{{ log.action }}">
+                                {{ log.get_action_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if log.target_company %}
+                                {{ log.target_company.name }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.details }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Логи не найдены</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.filter-form {
+    margin-bottom: 0;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    align-items: end;
+}
+
+.action-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.action-company_approved {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.action-company_rejected {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.action-company_updated {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.action-backup_created {
+    background: #f0f9ff;
+    color: #0369a1;
+}
+
+.action-backup_restored {
+    background: #fef7cd;
+    color: #854d0e;
+}
+
+.action-backup_deleted {
+    background: #fef2f2;
+    color: #991b1b;
+}
+
+.action-backup_downloaded {
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.action-backup_uploaded {
+    background: #faf5ff;
+    color: #7c3aed;
+}
+
+.action-logs_cleared {
+    background: #f1f5f9;
+    color: #475569;
+}
+</style>
+{% endblock %}

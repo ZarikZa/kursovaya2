@@ -1,0 +1,309 @@
+<div class="user-type-header">
+    <div class="user-type-container">
+        <a href="{% url 'home_page' %}" class="user-type-link {% if request.path == '/login/aplicant/' %}active{% endif %}">
+            Соискатель
+        </a>
+        <a href="{% url 'home_comp' %}" class="user-type-link {% if request.path == '/login/employee/' %}active{% endif %}">
+            Компания
+        </a>
+        {% if user.is_authenticated and user.is_staff %}
+        <a href="{% url 'admin_dashboard' %}" class="user-type-link {% if 'admin_panel' in request.path %}active{% endif %}">
+            Администратор
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+{% load static %}
+<header class="header">
+    <div class="header-container">
+        <a href="{% url 'home_page' %}" class="header-logo">
+            <span>HR-Lab</span>
+        </a>
+        <nav class="header-nav">
+            <ul class="header-menu" id="header-menu">
+                <li><a href="{% url 'home_page' %}" class="header-link">Главная</a></li>
+                
+                <li><a href="{% url 'vakansi_page' %}" class="header-link">Вакансии</a></li>
+                
+                {% if user.is_authenticated %}
+                    {% if user.user_type == "applicant" %}
+                        <li><a href="{% url 'applicant_profile' %}" class="header-link">Профиль</a></li>
+                    {% elif user.user_type == "company" %}
+                        <li><a href="{% url 'company_profile' %}" class="header-link">Профиль компании</a></li>
+                    {% elif user.user_type == "analitic" %}
+                        <li><a href="{% url 'analytics_dashboard' %}" class="header-button header-button--analytics">Аналитика</a></li>
+                    {% endif %}
+                    
+                    {% if user.is_staff or user.user_type == 'adminsite'%}
+                        <li><a href="{% url 'admin_dashboard' %}" class="header-link">Админ панель</a></li>
+                        {% if user.is_superuser %}
+                            <li><a href="{% url 'admin_management' %}" class="header-link">Админы сайта</a></li>
+                            <li><a href="/admin/" class="header-link">Django panel</a></li>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <li><a href="{% url 'logout' %}" class="header-button header-button--logout">Выйти</a></li>
+                    
+                {% else %}
+                    <li><a href="{% url 'login_user' %}" class="header-button header-button--login">Войти</a></li>
+                    <li><a href="{% url 'registration_user' %}" class="header-button header-button--register">Регистрация</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        <button class="header-toggle" id="header-toggle" aria-label="Toggle menu">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+    </div>
+</header>
+
+<style>
+    .user-type-header {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        background: #1e3a8a;
+        height: 35px;
+        z-index: 1001;
+        border-bottom: 1px solid #374151;
+    }
+
+    .user-type-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 1.5rem;
+    }
+
+    .user-type-link {
+        color: white;
+        text-decoration: none;
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 4px 12px;
+        border-radius: 4px;
+        transition: all 0.3s ease;
+        background: transparent;
+    }
+
+    .user-type-link:hover {
+        background: rgba(255, 255, 255, 0.15);
+        color: #fbbf24;
+    }
+
+    .user-type-link.active {
+        background: #3b82f6;
+        color: white;
+        font-weight: 600;
+    }
+
+    /* Стиль для вкладки администратора */
+    .user-type-link[href*="admin_panel"] {
+        background: rgba(220, 38, 38, 0.2);
+        border: 1px solid rgba(220, 38, 38, 0.4);
+    }
+
+    .user-type-link[href*="admin_panel"]:hover,
+    .user-type-link[href*="admin_panel"].active {
+        background: #dc2626;
+        color: white;
+    }
+
+    /* Обновляем отступ для основного header */
+    .header {
+        position: fixed;
+        top: 35px; /* Смещаем основной header вниз на высоту верхнего */
+        width: 100%;
+        background: linear-gradient(90deg, rgba(37, 99, 235, 0.9), rgba(30, 64, 175, 0.9));
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+    }
+
+    /* Добавляем отступ для основного контента */
+    body {
+        padding-top: 115px; /* 35px (верхний header) + 80px (основной header) */
+    }
+
+    /* Увеличиваем интервал между кнопками */
+    .header-menu {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem; /* Увеличил с 8px до 1.5rem (24px) */
+    }
+
+    .header-link {
+        color: white;
+        text-decoration: none;
+        font-weight: 500;
+        padding: 8px 0;
+        position: relative;
+        transition: color 0.3s ease;
+    }
+
+    .header-link::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: #fbbf24;
+        transition: width 0.3s ease;
+    }
+
+    .header-link:hover::after,
+    .header-link.active::after {
+        width: 100%;
+    }
+
+    .header-link:hover,
+    .header-link.active {
+        color: #fbbf24;
+    }
+
+    /* Дополнительные стили кнопок */
+    .header-button {
+        padding: 10px 18px; /* Немного увеличил паддинг */
+        border-radius: 50px;
+        text-decoration: none;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+
+    .header-button--login {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+
+    .header-button--login:hover {
+        background: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    .header-button--register {
+        background: #f59e0b;
+        color: white;
+    }
+
+    .header-button--register:hover {
+        background: #d97706;
+    }
+
+    .header-button--logout {
+        background: #1e293b;
+        color: white;
+    }
+
+    .header-button--logout:hover {
+        background: #475569;
+    }
+
+    .header-button--hr {
+        background: rgba(245, 158, 11, 0.9);
+        color: white;
+    }
+
+    .header-button--hr:hover {
+        background: rgba(217, 119, 6, 0.9);
+    }
+
+    .header-button--analytics {
+        background: rgba(16, 185, 129, 0.9);
+        color: white;
+    }
+
+    .header-button--analytics:hover {
+        background: rgba(5, 150, 105, 0.9);
+    }
+
+    /* Адаптивность для мобильных */
+    @media (max-width: 768px) {
+        .user-type-container {
+            justify-content: center;
+            gap: 1rem;
+        }
+        
+        .user-type-link {
+            font-size: 12px;
+            padding: 3px 10px;
+        }
+        
+        .header {
+            top: 35px;
+        }
+        
+        body {
+            padding-top: 115px;
+        }
+        
+        .header-nav {
+            top: 115px; /* 35px + 80px */
+        }
+
+        .header-menu {
+            flex-direction: column;
+            gap: 1rem; /* Увеличил интервал и на мобильных */
+            align-items: stretch;
+        }
+
+        .header-link {
+            padding: 12px 0;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-link:last-child {
+            border-bottom: none;
+        }
+
+        .header-button {
+            width: 100%;
+            text-align: center;
+            justify-content: center;
+            padding: 12px 20px;
+        }
+    }
+
+    /* Для десктопа - компактное расположение с увеличенным интервалом */
+    @media (min-width: 769px) {
+        .header-menu {
+            gap: 1.5rem; /* Увеличил интервал между всеми элементами */
+        }
+
+        .header-button {
+            padding: 10px 18px;
+            font-size: 14px;
+        }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const headerToggle = document.getElementById('header-toggle');
+    const headerMenu = document.getElementById('header-menu');
+    
+    if (headerToggle && headerMenu) {
+        headerToggle.addEventListener('click', function() {
+            headerMenu.classList.toggle('active');
+            headerToggle.classList.toggle('active');
+        });
+    }
+
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.header-nav') && !event.target.closest('.header-toggle')) {
+            headerMenu.classList.remove('active');
+            headerToggle.classList.remove('active');
+        }
+    });
+});
+</script>

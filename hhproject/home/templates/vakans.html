@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Вакансии - CareerHub{% endblock %}
+
+{% block style %}
+{% include '_inc/style_vakans.html' %}
+{% include '_inc/style.html' %}
+{% endblock %}
+
+{% block content %}
+<section class="vacancies-section">
+    <div class="container">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-5 fw-bold text-center mb-3">Найдите свою идеальную работу</h1>
+                <div class="search-box">
+                    <form method="get" action="{% url 'vakansi_page' %}">
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <input type="text" name="search" class="form-control form-control-lg border-0" 
+                                       placeholder="Должность, ключевые слова или компания" 
+                                       value="{{ request.GET.search }}">
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary btn-lg w-100">Найти</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-3">
+                <div class="filter-sidebar">
+                    <h5 class="mb-3">Фильтры</h5>
+                    
+                    <form method="get" action="{% url 'vakansi_page' %}" id="filter-form">
+                        <div class="mb-4">
+                            <h6>Тип занятости</h6>
+                            {% for condition in work_conditions %}
+                            <div class="form-check">
+                                <input class="form-check-input employment-filter" type="checkbox" name="employment" value="{{ condition.work_conditions_name }}" 
+                                       {% if condition.work_conditions_name in selected_employments %}checked{% endif %}>
+                                <label class="form-check-label" for="id_{{ condition.work_conditions_name }}">{{ condition.work_conditions_name }}</label>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Опыт работы</h6>
+                            <div class="form-check">
+                                <input class="form-check-input experience-filter" type="checkbox" name="experience" value="Без опыта" 
+                                       {% if 'Без опыта' in selected_experiences %}checked{% endif %}>
+                                <label class="form-check-label" for="id_noExp">Без опыта</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input experience-filter" type="checkbox" name="experience" value="1-3 года" 
+                                       {% if '1-3 года' in selected_experiences %}checked{% endif %}>
+                                <label class="form-check-label" for="id_1-3years">1-3 года</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input experience-filter" type="checkbox" name="experience" value="3-6 лет" 
+                                       {% if '3-6 лет' in selected_experiences %}checked{% endif %}>
+                                <label class="form-check-label" for="id_3-6years">3-6 лет</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h6>Зарплата, ₽</h6>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <input type="number" class="form-control" name="salary_from" placeholder="От" 
+                                           value="{{ salary_from }}">
+                                </div>
+                                <div class="col-6">
+                                    <input type="number" class="form-control" name="salary_to" placeholder="До" 
+                                           value="{{ salary_to }}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 mb-2">Применить фильтры</button>
+                        <button type="button" class="btn btn-outline-primary w-100" onclick="resetFilters()">Сбросить фильтры</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <div class="sorting-options">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <span class="text-muted">Найдено вакансий: <strong>{{ page_obj.paginator.count }}</strong></span>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <select class="form-select" onchange="location = this.value;" style="width: auto; display: inline-block;">
+                                <option value="?sort=newest" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>Сначала новые</option>
+                                <option value="?sort=salary_high" {% if request.GET.sort == 'salary_high' %}selected{% endif %}>По убыванию зарплаты</option>
+                                <option value="?sort=salary_low" {% if request.GET.sort == 'salary_low' %}selected{% endif %}>По возрастанию зарплаты</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vacanciesList">
+                    {% for vacancy in page_obj %}
+                    <div class="vacancy-card">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <a href="{% url 'vacancy_detail' vacancy.id %}" class="vacancy-title-link">
+                                    <h3 class="vacancy-title">{{ vacancy.position|default:'Нет позиции' }}</h3>
+                                </a>
+                                <p class="company-name mb-2">{{ vacancy.company.name|default:'Нет компании' }}</p>
+                                <div class="d-flex flex-wrap gap-2 mb-2">
+                                    <span class="badge bg-primary">{{ vacancy.work_conditions.work_conditions_name|default:'Нет типа занятости' }}</span>
+                                    <span class="badge bg-secondary">1-3 года</span>
+                                    {% if vacancy.work_conditions.work_conditions_name == 'Удаленная работа' %}
+                                    <span class="badge badge-remote">Удаленно</span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-muted mb-0">{{ vacancy.description|truncatewords:20|default:'Нет описания' }}</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <div class="salary mb-2">{{ vacancy.salary_min|default:0 }} - {{ vacancy.salary_max|default:0 }} ₽</div>
+                                <small class="text-muted d-block">Опубликовано {{ vacancy.created_date|date:"d.m.Y"|default:'Нет даты' }}</small>
+                                <div class="mt-2">
+                                    <span class="me-2">Просмотров: {{ vacancy.views }}</span>
+                                    {% if user.is_authenticated and user.user_type == 'applicant' %}
+                                        {% if vacancy.has_response %}
+                                            <button class="btn btn-success" disabled>Отклик отправлен</button>
+                                        {% else %}
+                                            <a href="{% url 'apply_to_vacancy' vacancy.id %}" class="btn btn-primary">Откликнуться</a>
+                                        {% endif %}
+                                    {% elif not user.is_authenticated %}
+                                        <a href="{% url 'login_user' %}?next={{ request.path }}" class="btn btn-primary">Откликнуться</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-5">
+                        <h4>😔 Вакансий не найдено</h4>
+                        <p class="text-muted">Проверь фильтры или добавь вакансии</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if page_obj.has_other_pages %}
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Назад</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Назад</span>
+                        </li>
+                        {% endif %}
+
+                        {% for i in page_obj.paginator.page_range %}
+                            {% if page_obj.number == i %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ i }}</span>
+                            </li>
+                            {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">{{ i }}</a>
+                            </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Вперед</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Вперед</span>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+function resetFilters() {
+    document.getElementById('filter-form').reset();
+    window.location.href = "{% url 'vakansi_page' %}";
+}
+</script>
+{% endblock %}

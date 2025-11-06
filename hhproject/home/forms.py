@@ -1,0 +1,187 @@
+from django import forms
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from .models import User, Company, Applicant, Employee, Role
+
+
+class CustomAuthenticationForm(AuthenticationForm):
+    username = forms.EmailField(label='Email')
+    
+    class Meta:
+        model = User
+        fields = ['username', 'password']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        self.fields['username'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Введите email',
+            'autocomplete': 'email'
+        })
+        
+        self.fields['password'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Введите пароль', 
+            'autocomplete': 'current-password'
+        })
+    
+class BaseUserCreationForm(UserCreationForm):
+    email = forms.EmailField(required=True, label="Email")
+    phone = forms.CharField(max_length=80, required=True, label="Телефон")
+    
+    class Meta:
+        model = User
+        fields = ('email', 'phone', 'password1', 'password2')
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.username = user.email  
+        if commit:
+            user.save()
+        return user
+    
+class ApplicantSignUpForm(BaseUserCreationForm):
+    first_name = forms.CharField(
+        max_length=80, 
+        required=True, 
+        label="Имя",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ваше имя',
+            'autocomplete': 'given-name'
+        })
+    )
+    
+    last_name = forms.CharField(
+        max_length=80, 
+        required=True, 
+        label="Фамилия",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ваша фамилия', 
+            'autocomplete': 'family-name'
+        })
+    )
+    
+    birth_date = forms.DateField(
+        required=True, 
+        label="Дата рождения",
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control',
+            'placeholder': 'дд.мм.гггг'
+        })
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        self.fields['email'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'example@email.com',
+            'autocomplete': 'email'
+        })
+        
+        self.fields['phone'].widget.attrs.update({
+            'class': 'form-control', 
+            'placeholder': '+7 (999) 999-99-99',
+            'autocomplete': 'tel'
+        })
+        
+        self.fields['password1'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Не менее 8 символов',
+            'autocomplete': 'new-password'
+        })
+        
+        self.fields['password2'].widget.attrs.update({
+            'class': 'form-control',
+            'placeholder': 'Повторите пароль',
+            'autocomplete': 'new-password'
+        })
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.user_type = 'applicant'
+        if commit:
+            user.save()
+            Applicant.objects.create(
+                user=user,
+                first_name=self.cleaned_data['first_name'],
+                last_name=self.cleaned_data['last_name'],
+                birth_date=self.cleaned_data['birth_date']
+            )
+        return user
+    
+
+
+class AnaliticSignUpForm(BaseUserCreationForm):
+    first_name = forms.CharField(max_length=80, required=True, label="Имя")
+    last_name = forms.CharField(max_length=80, required=True, label="Фамилия")
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.user_type = 'analitic'
+        if commit:
+            user.save()
+            role, created = Role.objects.get_or_create(role_name='Аналитик')
+            Employee.objects.create(
+                user=user,
+                first_name=self.cleaned_data['first_name'],
+                last_name=self.cleaned_data['last_name'],
+                role=role,
+                access_level='analitic'
+            )
+        return user
+
+class HRAgentSignUpForm(BaseUserCreationForm):
+    first_name = forms.CharField(max_length=80, required=True, label="Имя")
+    last_name = forms.CharField(max_length=80, required=True, label="Фамилия")
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.user_type = 'hragent'
+        if commit:
+            user.save()
+            role, created = Role.objects.get_or_create(role_name='HR агент')
+            Employee.objects.create(
+                user=user,
+                first_name=self.cleaned_data['first_name'],
+                last_name=self.cleaned_data['last_name'],
+                role=role,
+                access_level='hr'
+            )
+        return user
+
+class AdminSiteSignUpForm(BaseUserCreationForm):
+    first_name = forms.CharField(max_length=80, required=True, label="Имя")
+    last_name = forms.CharField(max_length=80, required=True, label="Фамилия")
+    
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.user_type = 'adminsite'
+        if commit:
+            user.save()
+            role, created = Role.objects.get_or_create(role_name='Админ сайта')
+            Employee.objects.create(
+                user=user,
+                first_name=self.cleaned_data['first_name'],
+                last_name=self.cleaned_data['last_name'],
+                role=role,
+                access_level='full'
+            )
+        return user
+    
+class ApplicantEditForm(forms.ModelForm):
+    class Meta:
+        model = Applicant
+        fields = ['first_name', 'last_name', 'birth_date', 'resume']
+        widgets = {
+            'birth_date': forms.DateInput(attrs={'type': 'date'}),
+            'resume': forms.Textarea(attrs={'rows': 6}),
+        }
+
+class UserEditForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['email', 'phone']

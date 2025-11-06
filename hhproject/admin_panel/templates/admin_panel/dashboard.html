@@ -1,0 +1,86 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title_name %}Дашборд - Админ панель{% endblock %}
+
+   {% block style %}
+        {% include '_inc/style.html' %}
+        {% include '_inc/style_admin.html' %}
+    {% endblock %}
+
+{% block admin_content %}
+<div class="admin-content-header">
+    <h1>Дашборд</h1>
+    <p>Обзор системы и статистика</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ pending_count }}</div>
+        <div class="stat-label">Компаний на проверке</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_companies }}</div>
+        <div class="stat-label">Всего компаний</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ approved_companies }}</div>
+        <div class="stat-label">Подтвержденных компаний</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_users }}</div>
+        <div class="stat-label">Всего пользователей</div>
+    </div>
+</div>
+
+<div class="admin-grid">
+    <!-- Последние действия -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h3>Последние действия</h3>
+        </div>
+        <div class="admin-card-body">
+            {% if recent_logs %}
+            <div class="activity-list">
+                {% for log in recent_logs %}
+                <div class="activity-item">
+                    <div class="activity-content">
+                        <strong>{{ log.admin.username }}</strong> - {{ log.get_action_display }}
+                        <div class="activity-details">{{ log.details }}</div>
+                    </div>
+                    <div class="activity-time">
+                        {{ log.created_at|date:"d.m.Y H:i" }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted">Нет последних действий</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Статистика пользователей -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h3>Статистика пользователей</h3>
+        </div>
+        <div class="admin-card-body">
+            <div class="user-stats">
+                <div class="user-stat-item">
+                    <span class="stat-label">Компании:</span>
+                    <span class="stat-value">{{ company_users }}</span>
+                </div>
+                <div class="user-stat-item">
+                    <span class="stat-label">Соискатели:</span>
+                    <span class="stat-value">{{ job_seeker_users }}</span>
+                </div>
+                <div class="user-stat-item">
+                    <span class="stat-label">Отклоненные компании:</span>
+                    <span class="stat-value">{{ rejected_companies }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

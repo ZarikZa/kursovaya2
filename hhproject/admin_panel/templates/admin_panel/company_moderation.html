@@ -1,0 +1,122 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title_name %}Модерация компаний - Админ панель{% endblock %}
+
+{% block style %}
+        {% include '_inc/style.html' %}
+        {% include '_inc/style_admin.html' %}
+    {% endblock %}
+
+{% block admin_content %}
+<div class="admin-content-header">
+    <h1>Модерация компаний</h1>
+    <p>Управление статусами компаний</p>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Компании на проверке ({{ pending_companies.count }})</h3>
+    </div>
+    <div class="admin-card-body">
+        {% if pending_companies %}
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>ИНН</th>
+                        <th>Сфера</th>
+                        <th>Дата регистрации</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in pending_companies %}
+                    <tr>
+                        <td>
+                            <strong>{{ company.name }}</strong>
+                            <div class="text-muted">{{ company.user.email }}</div>
+                        </td>
+                        <td>{{ company.number }}</td>
+                        <td>{{ company.industry }}</td>
+                        <td>{{ company.created_at|date:"d.m.Y" }}</td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="{% url 'admin_company_detail' company.id %}" class="btn-admin btn-admin-primary btn-admin-sm">
+                                    Просмотр
+                                </a>
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="company_id" value="{{ company.id }}">
+                                    <select name="status" onchange="this.form.submit()" class="admin-form-control" style="width: auto; display: inline-block;">
+                                        {% for status, label in status_choices %}
+                                        <option value="{{ status }}" {% if company.status == status %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Нет компаний на проверке</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Все компании</h3>
+    </div>
+    <div class="admin-card-body">
+        {% if all_companies %}
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Название</th>
+                        <th>Статус</th>
+                        <th>ИНН</th>
+                        <th>Сфера</th>
+                        <th>Дата регистрации</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for company in all_companies %}
+                    <tr>
+                        <td>{{ company.name }}</td>
+                        <td>
+                            {% if company.status == 'pending' %}
+                                <span class="status-pending">На проверке</span>
+                            {% elif company.status == 'approved' %}
+                                <span class="status-approved">Подтверждена</span>
+                            {% elif company.status == 'rejected' %}
+                                <span class="status-rejected">Отклонена</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ company.number }}</td>
+                        <td>{{ company.industry }}</td>
+                        <td>{{ company.created_at|date:"d.m.Y" }}</td>
+                        <td>
+                            <a href="{% url 'admin_company_detail' company.id %}" class="btn-admin btn-admin-primary btn-admin-sm">
+                                Детали
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted">Нет зарегистрированных компаний</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

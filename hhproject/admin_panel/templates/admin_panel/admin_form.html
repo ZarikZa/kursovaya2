@@ -1,0 +1,199 @@
+{% extends 'admin_panel/base.html' %}
+{% load static %}
+
+{% block title_name %}{{ title }} - Панель управления{% endblock %}
+
+{% block style %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'css/style_prof.css' %}">
+{% endblock %}
+
+{% block admin_content %}
+<div class="admin-content-header">
+    <div class="header-actions">
+        <a href="{% url 'admin_management' %}" class="btn-admin btn-admin-primary">
+            ← Назад к списку
+        </a>
+    </div>
+    <h1>{{ title }}</h1>
+    <p>Заполните информацию об администраторе сайта</p>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Основная информация</h3>
+    </div>
+    <div class="admin-card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <div class="form-row">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">{{ form.first_name.label }} *</label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                    <div class="error-text">
+                        {% for error in form.first_name.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="admin-form-group">
+                    <label class="admin-form-label">{{ form.last_name.label }} *</label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                    <div class="error-text">
+                        {% for error in form.last_name.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">{{ form.email.label }} *</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <div class="error-text">
+                        {% for error in form.email.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="admin-form-group">
+                    <label class="admin-form-label">{{ form.phone.label }} *</label>
+                    {{ form.phone }}
+                    {% if form.phone.errors %}
+                    <div class="error-text">
+                        {% for error in form.phone.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if form.password1 %}
+            <div class="form-row">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">{{ form.password1.label }} *</label>
+                    {{ form.password1 }}
+                    {% if form.password1.errors %}
+                    <div class="error-text">
+                        {% for error in form.password1.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="admin-form-group">
+                    <label class="admin-form-label">{{ form.password2.label }} *</label>
+                    {{ form.password2 }}
+                    {% if form.password2.errors %}
+                    <div class="error-text">
+                        {% for error in form.password2.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if form.is_active %}
+            <div class="admin-form-group">
+                <div class="checkbox-group">
+                    {{ form.is_active }}
+                    <label class="admin-form-label" for="{{ form.is_active.id_for_label }}">
+                        {{ form.is_active.label }}
+                    </label>
+                </div>
+                {% if form.is_active.errors %}
+                <div class="error-text">
+                    {% for error in form.is_active.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <div class="form-actions">
+                <button type="submit" class="btn-admin btn-admin-success">
+                    {% if admin %}Обновить{% else %}Создать администратора{% endif %}
+                </button>
+                <a href="{% url 'admin_management' %}" class="btn-admin btn-admin-primary">
+                    Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.checkbox-group label {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.error-text {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 5px;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.alert-danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+}
+</style>
+{% endblock %}

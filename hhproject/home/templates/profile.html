@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Профиль соискателя - ProHR{% endblock %}
+
+{% block style %}
+{%include '_inc/style.html'%}
+{%include '_inc/style_prof.html'%}
+{% endblock %}
+
+{% block content %}
+<div class="profile-section">
+    <div class="profile-container">
+        <!-- Основная карточка профиля -->
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    {{ applicant.first_name|first }}{{ applicant.last_name|first }}
+                </div>
+                <div class="profile-info">
+                    <h1>{{ applicant.first_name }} {{ applicant.last_name }}</h1>
+                    <div class="email">{{ user.email }}</div>
+                </div>
+                <div class="profile-actions">
+                    <a href="{% url 'edit_applicant_profile' %}" class="btn btn-edit">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Редактировать
+                    </a>
+                    <button type="button" class="btn btn-delete" onclick="openDeleteModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Удалить профиль
+                    </button>
+                </div>
+            </div>
+            
+            <div class="profile-details">
+                <div class="detail-item" style="--index: 1">
+                    <div class="detail-label">Телефон</div>
+                    <div class="detail-value">{{ user.phone }}</div>
+                </div>
+                <div class="detail-item" style="--index: 2">
+                    <div class="detail-label">Дата рождения</div>
+                    <div class="detail-value">{{ applicant.birth_date|date:"d.m.Y" }}</div>
+                </div>
+                <div class="detail-item" style="--index: 3">
+                    <div class="detail-label">Дата регистрации</div>
+                    <div class="detail-value">{{ user.date_joined|date:"d.m.Y" }}</div>
+                </div>
+            </div>
+
+            <!-- Резюме -->
+            <div class="resume-section">
+                <h3>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    Резюме
+                </h3>
+                <div class="resume-content">
+                    {% if applicant.resume %}
+                        {{ applicant.resume|linebreaks }}
+                    {% else %}
+                        <p class="no-resume">Резюме не заполнено</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="profile-sections">
+            <!-- Остальной код с избранными вакансиями и откликами -->
+            <div class="section-card">
+                <h3>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                    </svg>
+                    Избранные вакансии
+                </h3>
+                
+                {% if favorites %}
+                    {% for favorite in favorites %}
+                    <a href="{% url 'vacancy_detail' favorite.vacancy.id %}" class="favorite-item clickable-item">
+                        <div class="vacancy-title">{{ favorite.vacancy.position }}</div>
+                        <div class="vacancy-company">{{ favorite.vacancy.company.name }}</div>
+                        <div class="vacancy-salary">
+                            {% if favorite.vacancy.salary_min and favorite.vacancy.salary_max %}
+                                {{ favorite.vacancy.salary_min }} - {{ favorite.vacancy.salary_max }} ₽
+                            {% elif favorite.vacancy.salary_min %}
+                                от {{ favorite.vacancy.salary_min }} ₽
+                            {% elif favorite.vacancy.salary_max %}
+                                до {{ favorite.vacancy.salary_max }} ₽
+                            {% else %}
+                                Зарплата не указана
+                            {% endif %}
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                        </svg>
+                        <p>У вас пока нет избранных вакансий</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="section-card">
+                <h3>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    Мои отклики
+                </h3>
+                
+                {% if responses %}
+                    {% for response in responses %}
+                    <a href="{% url 'vacancy_detail' response.vacancy.id %}" class="response-item clickable-item">
+                        <div class="vacancy-title">{{ response.vacancy.position }}</div>
+                        <div class="vacancy-company">{{ response.vacancy.company.name }}</div>
+                        <div class="response-date">{{ response.response_date|date:"d.m.Y" }}</div>
+                        <div class="response-status status-{{ response.status.status_response_name|lower }}">
+                            {{ response.status.status_response_name }}
+                        </div>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <p>У вас пока нет откликов</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Подтверждение удаления</h3>
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Вы уверены, что хотите удалить свой профиль? Это действие нельзя будет отменить.</p>
+            <p>Все ваши данные, включая отклики и избранные вакансии, будут удалены.</p>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeDeleteModal()">Отмена</button>
+            <form method="post" action="{% url 'delete_applicant_profile' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-delete-confirm">Удалить профиль</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Функции для модального окна
+function openDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+
+// Закрытие модального окна при клике вне его
+window.onclick = function(event) {
+    const modal = document.getElementById('deleteModal');
+    if (event.target == modal) {
+        closeDeleteModal();
+    }
+}
+</script>
+{% endblock %}

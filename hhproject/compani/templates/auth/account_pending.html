@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Аккаунт на проверке - CareerHub{% endblock %}
+{% block style %}
+    {% include '_inc/style.html' %}
+    <style>
+        .pending-container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .pending-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #4a90e2;
+        }
+        
+        .pending-title {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+        
+        .pending-message {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+        
+        .pending-info {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        
+        .pending-actions {
+            margin-top: 30px;
+        }
+        
+        .btn-logout {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-logout:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+    </style>
+{% endblock %}
+{% block content %}
+<div class="main-content">
+    <div class="container">
+        <div class="pending-container">
+            <div class="pending-icon">⏳</div>
+            <h1 class="pending-title">Аккаунт на проверке</h1>
+            <div class="pending-message">
+                Ваш аккаунт компании находится на проверке администратором.
+                Это обычно занимает 1-2 рабочих дня.
+            </div>
+            
+            <div class="pending-info">
+                <p>Мы проверяем предоставленные документы и информацию о компании.</p>
+                <p>Вы получите уведомление по email, как только ваш аккаунт будет подтвержден.</p>
+            </div>
+            
+            <div class="pending-actions">
+                <a href="{% url 'logout' %}" class="btn-logout">Выйти из аккаунта</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
