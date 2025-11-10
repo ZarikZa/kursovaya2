@@ -24,6 +24,9 @@
                         <li><a href="{% url 'vacancy_list' %}" class="header-link">Вакансии</a></li>
                         <li><a href="{% url 'responses_list' %}" class="header-link">Отклики</a></li>
                     {% endif %}
+                    {% if user.user_type == "hragent"%}
+                        <li><a href="{% url 'employee_profile' %}" class="header-link">Профиль</a></li>
+                    {% endif %}
                     {% if user.user_type == "company" %}
                          <li><a href="{% url 'hr_agents_list' %}" class="header-link">HR-агенты</a></li>
                          <li><a href="{% url 'company_profile' %}" class="header-link">Профиль</a></li>

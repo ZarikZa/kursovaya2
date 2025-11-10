@@ -182,7 +182,6 @@ ProHR - Найди лучших сотрудников
         </div>
     </section>
 
-    <!-- Stats Section для компаний -->
     <section class="company-stats">
         <div class="container">
             <div class="row text-center mb-5">
@@ -221,7 +220,6 @@ ProHR - Найди лучших сотрудников
         </div>
     </section>
 
-    <!-- Features Section для компаний -->
     <section class="company-features">
         <div class="container">
             <div class="row text-center mb-5">
@@ -271,7 +269,12 @@ ProHR - Найди лучших сотрудников
                 <div class="col-lg-8 mx-auto text-center animate-on-scroll">
                     <h2 class="display-5 fw-bold mb-4">Готовы найти идеальных сотрудников?</h2>
                     <p class="lead mb-5">Присоединяйтесь к успешным компаниям, которые уже построили сильные команды с помощью нашей платформы</p>
-                    <a href="#" class="cta-btn-company me-3"><i class="fas fa-building me-2"></i> Зарегистрировать компанию</a>
+                    {%if user.user_type != 'company'%}
+                        <a href="{% url 'reg_comp'%}" class="cta-btn-company me-3"><i class="fas fa-building me-2"></i> Зарегистрировать компанию</a>
+                    {% else%}
+                        <a href="{% url 'company_profile'%}" class="cta-btn-company me-3"><i class="fas fa-building me-2"></i> Посмотреть компанию</a>
+                    {% endif%}
+                        
                 </div>
             </div>
         </div>

@@ -115,7 +115,6 @@
         </div>
     </section>
 
-    <!-- Features Section -->
     <section class="features-section">
         <div class="container">
             <div class="row text-center mb-5">
@@ -157,64 +156,18 @@
         </div>
     </section>
 
-    <!-- Job Categories -->
-    <section class="categories-section">
-        <div class="container">
-            <div class="row text-center mb-5">
-                <div class="col-12">
-                    <h2 class="display-5 fw-bold">Популярные категории</h2>
-                    <p class="lead">Ищите вакансии по интересующим вас направлениям</p>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <div class="category-card animate-on-scroll">
-                        <i class="fas fa-laptop-code fa-3x text-primary mb-3"></i>
-                        <h5>IT и Разработка</h5>
-                        <p class="text-muted">1254 вакансии</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <div class="category-card animate-on-scroll">
-                        <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
-                        <h5>Маркетинг</h5>
-                        <p class="text-muted">867 вакансий</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <div class="category-card animate-on-scroll">
-                        <i class="fas fa-paint-brush fa-3x text-primary mb-3"></i>
-                        <h5>Дизайн</h5>
-                        <p class="text-muted">654 вакансии</p>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6 mb-4">
-                    <div class="category-card animate-on-scroll">
-                        <i class="fas fa-briefcase fa-3x text-primary mb-3"></i>
-                        <h5>Бизнес</h5>
-                        <p class="text-muted">932 вакансии</p>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="text-center mt-4">
-                <a href="#" class="btn btn-outline-primary btn-lg">Все категории <i class="fas fa-arrow-right ms-2"></i></a>
-            </div>
-        </div>
-    </section>
-
-    <!-- Testimonials -->
-
-    <!-- CTA Section -->
     <section class="cta-section">
         <div class="container">
             <div class="row">
                 <div class="col-lg-8 mx-auto text-center animate-on-scroll">
                     <h2 class="display-5 fw-bold mb-4">Готовы найти работу мечты?</h2>
                     <p class="lead mb-5">Присоединяйтесь к тысячам профессионалов, которые уже нашли идеальную работу с помощью нашей платформы</p>
-                    <a href="#" class="cta-btn me-3"><i class="fas fa-user-plus me-2"></i> Создать профиль</a>
-                    <a href="#" class="btn btn-outline-light btn-lg"><i class="fas fa-search me-2"></i> Найти вакансии</a>
+                    {% if user.user_type != 'applicant' %}
+                        <a href="{% url 'registration_user' %}" class="cta-btn me-3"><i class="fas fa-user-plus me-2"></i> Создать профиль</a>
+                    {% else %}
+                        <a href="{% url 'applicant_profile' %}" class="cta-btn me-3"><i class="fas fa-user-plus me-2"></i> Псомтреть профиль</a>
+                    {%endif%}
+                    <a href="{% url 'vakansi_page' %}" class="btn btn-outline-light btn-lg"><i class="fas fa-search me-2"></i> Найти вакансии</a>
                 </div>
             </div>
         </div>

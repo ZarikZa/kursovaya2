@@ -4,14 +4,13 @@
 {% block title %}Профиль соискателя - ProHR{% endblock %}
 
 {% block style %}
-{%include '_inc/style.html'%}
-{%include '_inc/style_prof.html'%}
+{% include '_inc/style.html' %}
+{% include '_inc/style_prof.html' %}
 {% endblock %}
 
 {% block content %}
 <div class="profile-section">
     <div class="profile-container">
-        <!-- Основная карточка профиля -->
         <div class="profile-card">
             <div class="profile-header">
                 <div class="profile-avatar">
@@ -21,6 +20,7 @@
                     <h1>{{ applicant.first_name }} {{ applicant.last_name }}</h1>
                     <div class="email">{{ user.email }}</div>
                 </div>
+                {% if request.user == user and request.user.user_type == 'applicant' %}
                 <div class="profile-actions">
                     <a href="{% url 'edit_applicant_profile' %}" class="btn btn-edit">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -38,16 +38,33 @@
                         Удалить профиль
                     </button>
                 </div>
+                {% else %}
+                    <div class="profile-actions">
+                    <span class="view-only-label">Просмотр профиля</span>
+                </div>
+                {% endif %}
             </div>
             
             <div class="profile-details">
                 <div class="detail-item" style="--index: 1">
                     <div class="detail-label">Телефон</div>
-                    <div class="detail-value">{{ user.phone }}</div>
+                    <div class="detail-value">
+                        {% if user.phone %}
+                            {{ user.phone }}
+                        {% else %}
+                            Не указан
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="detail-item" style="--index: 2">
                     <div class="detail-label">Дата рождения</div>
-                    <div class="detail-value">{{ applicant.birth_date|date:"d.m.Y" }}</div>
+                    <div class="detail-value">
+                        {% if applicant.birth_date %}
+                            {{ applicant.birth_date|date:"d.m.Y" }}
+                        {% else %}
+                            Не указана
+                        {% endif %}
+                    </div>
                 </div>
                 <div class="detail-item" style="--index: 3">
                     <div class="detail-label">Дата регистрации</div>
@@ -77,8 +94,9 @@
             </div>
         </div>
         
+        <!-- Избранные вакансии и отклики показываем только самому соискателю -->
+        {% if request.user == user and request.user.user_type == 'applicant' %}
         <div class="profile-sections">
-            <!-- Остальной код с избранными вакансиями и откликами -->
             <div class="section-card">
                 <h3>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -144,10 +162,33 @@
                 {% endif %}
             </div>
         </div>
+        {% elif request.user != user %}
+        <!-- Для других пользователей (компаний/HR) показываем кнопку "Назад к откликам" -->
+        <div class="profile-sections">
+            <div class="section-card">
+                <div class="view-only-message">
+                    <a href="{% url 'responses_list' %}" class="back-button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        Назад к откликам
+                    </a>
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <h3>Режим просмотра</h3>
+                    <p>Вы просматриваете профиль соискателя. Личные разделы (избранные вакансии и отклики) доступны только владельцу профиля.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 
-<!-- Модальное окно подтверждения удаления -->
+<!-- Модальное окно подтверждения удаления показываем только самому соискателю -->
+{% if request.user == user and request.user.user_type == 'applicant' %}
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -167,9 +208,11 @@
         </div>
     </div>
 </div>
+{% endif %}
 
 <script>
-// Функции для модального окна
+// Функции для модального окна (только для владельца профиля)
+{% if request.user == user and request.user.user_type == 'applicant' %}
 function openDeleteModal() {
     document.getElementById('deleteModal').style.display = 'block';
 }
@@ -185,5 +228,61 @@ window.onclick = function(event) {
         closeDeleteModal();
     }
 }
+{% endif %}
 </script>
+
+<style>
+/* Стили для режима просмотра */
+.view-only-label {
+    padding: 8px 16px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.view-only-message {
+    text-align: center;
+    padding: 40px 20px;
+    position: relative;
+}
+
+.view-only-message .back-button {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #3b82f6;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.view-only-message .back-button:hover {
+    background: #2563eb;
+}
+
+.view-only-message svg {
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+.view-only-message h3 {
+    color: #374151;
+    margin-bottom: 10px;
+}
+
+.view-only-message p {
+    color: #6b7280;
+    line-height: 1.5;
+    max-width: 400px;
+    margin: 0 auto;
+}
+</style>
 {% endblock %}

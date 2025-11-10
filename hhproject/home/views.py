@@ -1,11 +1,20 @@
+import random
 from .models import *
 from .forms import *
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, authenticate, logout
+from django.contrib.auth import login, authenticate, logout, get_user_model
 from django.contrib.auth.decorators import login_required
 from django.views.generic import CreateView
 from django.db.models import Q
 from django.core.paginator import Paginator
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
+from django.contrib import messages
+
+
 def home_page(request):
     return render(request, 'home.html')
 
@@ -34,42 +43,31 @@ def custom_login(request):
             password = form.cleaned_data.get('password')
             user = authenticate(request, email=email, password=password)  
             
-            print(f"DEBUG: User found: {user}")  # Отладочный принт
-            print(f"DEBUG: User authenticated: {user is not None}")  # Отладочный принт
-            
             if user is not None:
                 if hasattr(user, 'company'):
                     company = user.company
-                    print(f"DEBUG: Company status: {company.status}")  # Отладочный принт
                     
                     if company.status == Company.STATUS_PENDING:
-                        print("DEBUG: Redirecting to pending page")  # Отладочный принт
                         return redirect('account_pending')
                     elif company.status == Company.STATUS_REJECTED:
-                        print("DEBUG: Company rejected")  # Отладочный принт
                         return render(request, 'auth/login.html', {'form': form})
                     else:
-                        print("DEBUG: Company approved, logging in")  # Отладочный принт
+                        print("DEBUG: Company approved, logging in")  
                 
-                # Логиним пользователя
                 login(request, user)
-                print("DEBUG: User logged in successfully")  # Отладочный принт
                 
-                # Редирект
                 next_url = request.GET.get('next')
                 if next_url and next_url.startswith('/'):
                     return redirect(next_url)
                 else:
-                    if hasattr(user, 'company'):
+                    if hasattr(user, 'company') or hasattr(user, 'hragent'):
                         return redirect('home_comp')
                     else:
                         return redirect('home_page')
             else:
-                print("DEBUG: Authentication failed")  # Отладочный принт
                 form.add_error(None, '❌ Неверный email или пароль')
         else:
-            print("DEBUG: Form invalid")  # Отладочный принт
-            print(f"DEBUG: Form errors: {form.errors}")  # Отладочный принт
+            print(f"DEBUG: Form errors: {form.errors}")  
     else:
         form = CustomAuthenticationForm()
     
@@ -263,7 +261,7 @@ def apply_to_vacancy(request, vacancy_id):
         
     except Exception as e:
         pass
-    return redirect('vacancy_detail', vacancy_id=vacancy_id)
+    return redirect('vakansi_page')
 
 @login_required
 def add_to_favorites(request, vacancy_id):
@@ -348,3 +346,248 @@ def delete_applicant_profile(request):
         return redirect('home_page')
     
     return redirect('applicant_profile')
+
+
+User = get_user_model()
+
+def password_reset_request(request):
+    if request.method == 'POST':
+        form = PasswordResetRequestForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            
+            try:
+                user = User.objects.get(email=email)
+                reset_code = str(random.randint(100000, 999999))
+                
+                request.session['reset_email'] = email
+                request.session['reset_code'] = reset_code
+                request.session['reset_attempts'] = 3  # 3 попытки ввода кода
+                
+                send_reset_code_email(user, reset_code)
+                
+                return redirect('password_reset_verify')
+                
+            except User.DoesNotExist:
+                messages.error(request, 'Пользователь с таким email не найден.')
+    
+    else:
+        form = PasswordResetRequestForm()
+    
+    return render(request, 'password_reset_request.html', {'form': form})
+
+def password_reset_verify(request):
+    # Проверяем, что пользователь прошел первый шаг
+    if 'reset_email' not in request.session:
+        messages.error(request, 'Сначала введите ваш email.')
+        return redirect('password_reset_request')
+    
+    if request.method == 'POST':
+        form = CodeVerificationForm(request.POST)
+        if form.is_valid():
+            entered_code = form.cleaned_data['code']
+            correct_code = request.session.get('reset_code')
+            attempts = request.session.get('reset_attempts', 3)
+            
+            if entered_code == correct_code:
+                # Код верный, переходим к смене пароля
+                request.session['code_verified'] = True
+                return redirect('password_reset_new')
+            else:
+                # Неверный код
+                attempts -= 1
+                request.session['reset_attempts'] = attempts
+                
+                if attempts <= 0:
+                    # Превышено количество попыток
+                    del request.session['reset_email']
+                    del request.session['reset_code']
+                    del request.session['reset_attempts']
+                    messages.error(request, 'Превышено количество попыток. Начните заново.')
+                    return redirect('password_reset_request')
+                else:
+                    messages.error(request, f'Неверный код. Осталось попыток: {attempts}')
+    
+    else:
+        form = CodeVerificationForm()
+    
+    return render(request, 'password_reset_verify.html', {
+        'form': form,
+        'email': request.session.get('reset_email'),
+        'attempts': request.session.get('reset_attempts', 3)
+    })
+
+def password_reset_new(request):
+    # Проверяем, что код верифицирован
+    if not request.session.get('code_verified'):
+        messages.error(request, 'Сначала подтвердите ваш email.')
+        return redirect('password_reset_request')
+    
+    if request.method == 'POST':
+        form = SetNewPasswordForm(request.POST)
+        if form.is_valid():
+            email = request.session.get('reset_email')
+            
+            try:
+                user = User.objects.get(email=email)
+                new_password = form.cleaned_data['new_password1']
+                user.set_password(new_password)
+                user.save()
+                
+                # Очищаем сессию
+                request.session.flush()
+                
+                messages.success(request, 'Пароль успешно изменен! Теперь вы можете войти с новым паролем.')
+                return redirect('login_user')
+                
+            except User.DoesNotExist:
+                messages.error(request, 'Ошибка. Пользователь не найден.')
+                return redirect('password_reset_request')
+    else:
+        form = SetNewPasswordForm()
+    
+    return render(request, 'password_reset_new.html', {'form': form})
+
+def send_reset_code_email(user, code):
+    user_email = user.email
+    first_name = user.first_name or 'Пользователь'
+    
+    try:
+        subject = f'Код восстановления пароля: {code}'
+        
+        html_message = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    font-family: 'Inter', 'Arial', sans-serif;
+                    line-height: 1.6;
+                    color: #1e293b;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    padding: 0;
+                    background: linear-gradient(135deg, #2563eb 0%, #1e293b 100%);
+                }}
+                .container {{
+                    background: white;
+                    margin: 20px;
+                    border-radius: 20px;
+                    overflow: hidden;
+                    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+                }}
+                .header {{
+                    background: linear-gradient(135deg, #2563eb 0%, #1e293b 100%);
+                    color: white;
+                    padding: 40px 30px;
+                    text-align: center;
+                }}
+                .header h1 {{
+                    margin: 0;
+                    font-size: 28px;
+                    font-weight: 700;
+                }}
+                .content {{
+                    padding: 40px 30px;
+                }}
+                .code-section {{
+                    text-align: center;
+                    margin: 30px 0;
+                }}
+                .code {{
+                    background: linear-gradient(45deg, #2563eb, #1e40af);
+                    color: white;
+                    font-size: 32px;
+                    font-weight: bold;
+                    padding: 20px;
+                    border-radius: 15px;
+                    letter-spacing: 8px;
+                    margin: 20px 0;
+                    display: inline-block;
+                    min-width: 200px;
+                }}
+                .security-note {{
+                    background: rgba(245, 158, 11, 0.1);
+                    border: 1px solid rgba(245, 158, 11, 0.3);
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin: 20px 0;
+                    text-align: center;
+                    font-size: 14px;
+                    color: #92400e;
+                }}
+                .footer {{
+                    background: #f1f5f9;
+                    padding: 30px;
+                    text-align: center;
+                    border-top: 1px solid #e2e8f0;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>HR-Lab</h1>
+                    <p>Восстановление пароля</p>
+                </div>
+                
+                <div class="content">
+                    <h2 style="color: #1e293b; text-align: center;">Здравствуйте, {first_name}!</h2>
+                    <p style="color: #64748b; text-align: center;">
+                        Для восстановления пароля используйте следующий код:
+                    </p>
+                    
+                    <div class="code-section">
+                        <div class="code">{code}</div>
+                        <p style="color: #64748b; font-size: 14px;">
+                            Код действителен в течение 10 минут
+                        </p>
+                    </div>
+                    
+                    <div class="security-note">
+                        ⚠️ <strong>Никому не сообщайте этот код!</strong><br>
+                        Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p><strong>С уважением, команда HR-Lab</strong></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        # Текстовая версия
+        plain_message = f"""
+        Здравствуйте, {first_name}!
+
+        Код для восстановления пароля: {code}
+
+        Код действителен в течение 10 минут.
+
+        ⚠️ Никому не сообщайте этот код!
+
+        Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.
+
+        ---
+        С уважением,
+        Команда HR-Lab
+        """
+        
+        send_mail(
+            subject=subject,
+            message=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[user_email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+        
+        print(f"✅ [EMAIL] Код восстановления отправлен: {user_email} - {code}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ [EMAIL] Ошибка отправки кода: {str(e)}")
+        return False

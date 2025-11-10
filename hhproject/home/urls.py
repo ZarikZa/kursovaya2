@@ -18,4 +18,8 @@ urlpatterns = [
     path('vacancy/<int:vacancy_id>/remove_from_favorites/', remove_from_favorites, name='remove_from_favorites'),
     path('profile/edit/', edit_applicant_profile, name='edit_applicant_profile'),
     path('profile/delete/', delete_applicant_profile, name='delete_applicant_profile'),
+    path('password-reset/', password_reset_request, name='password_reset_request'),
+    path('password-reset/verify/', password_reset_verify, name='password_reset_verify'),
+    path('password-reset/new/', password_reset_new, name='password_reset_new'),
+
 ]

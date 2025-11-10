@@ -19,4 +19,7 @@ urlpatterns = [
     path('unarchive-vacancy/<int:vacancy_id>/', unarchive_vacancy, name='unarchive_vacancy'),
     path('responses/', responses_list, name='responses_list'),
     path('account/pending/', account_pending, name='account_pending'),
+    path('vacancy/<int:vacancy_id>/edit/', edit_vacancy, name='edit_vacancy'),
+    path('employee/profile/', employee_profile, name='employee_profile'),
+    path('employee/profile/edit/', edit_employee_profile, name='edit_employee_profile'),
 ]

@@ -404,10 +404,35 @@ def responses_list(request):
         messages.error(request, 'У вас нет компании для просмотра откликов.')
         return redirect('home_comp')
 
+    # Получаем все отклики на вакансии компании
     responses = Response.objects.filter(vacancy__company=company).select_related(
         'applicants', 'vacancy', 'status'
     ).order_by('-response_date')
 
+    # Статистика по статусам
+    counts = {
+        'total': responses.count(),
+        'new': responses.filter(status__status_response_name='Новый').count(),
+        'viewed': responses.filter(status__status_response_name='Просмотрен').count(),
+        'invited': responses.filter(status__status_response_name='Приглашен').count(),
+        'rejected': responses.filter(status__status_response_name='Отклонен').count(),
+    }
+
+    # Фильтрация по статусу
+    status_filter = request.GET.get('status', 'all')
+    current_status = status_filter
+
+    if status_filter != 'all':
+        status_mapping = {
+            'new': 'Новый',
+            'viewed': 'Просмотрен', 
+            'invited': 'Приглашен',
+            'rejected': 'Отклонен'
+        }
+        if status_filter in status_mapping:
+            responses = responses.filter(status__status_response_name=status_mapping[status_filter])
+
+    # Обработка AJAX запросов для обновления статуса
     if request.method == 'POST':
         response_id = request.POST.get('response_id')
         response = get_object_or_404(Response, id=response_id, vacancy__company=company)
@@ -424,21 +449,49 @@ def responses_list(request):
             new_status_name = response.status.status_response_name
             
             # Отправляем письмо только если статус действительно изменился
+            email_sent = False
             if old_status_name != new_status_name:
                 email_sent = send_response_status_email(response, old_status_name, new_status_name)
+            
+            # Для AJAX запросов
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                # Обновляем статистику
+                updated_counts = {
+                    'total': Response.objects.filter(vacancy__company=company).count(),
+                    'new': Response.objects.filter(vacancy__company=company, status__status_response_name='Новый').count(),
+                    'viewed': Response.objects.filter(vacancy__company=company, status__status_response_name='Просмотрен').count(),
+                    'invited': Response.objects.filter(vacancy__company=company, status__status_response_name='Приглашен').count(),
+                    'rejected': Response.objects.filter(vacancy__company=company, status__status_response_name='Отклонен').count(),
+                }
                 
                 if email_sent:
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return JsonResponse({'status': 'success', 'message': 'Статус обновлен. Уведомление отправлено.'})
-                    messages.success(request, f'Статус отклика успешно обновлён. Уведомление отправлено соискателю.')
+                    return JsonResponse({
+                        'status': 'success', 
+                        'message': 'Статус обновлен. Уведомление отправлено.',
+                        'counts': updated_counts
+                    })
                 else:
-                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return JsonResponse({'status': 'warning', 'message': 'Статус обновлен, но не удалось отправить уведомление.'})
-                    messages.warning(request, f'Статус отклика обновлён, но не удалось отправить уведомление соискателю.')
+                    if old_status_name != new_status_name:
+                        return JsonResponse({
+                            'status': 'warning', 
+                            'message': 'Статус обновлен, но не удалось отправить уведомление.',
+                            'counts': updated_counts
+                        })
+                    else:
+                        return JsonResponse({
+                            'status': 'success', 
+                            'message': 'Статус обновлен.',
+                            'counts': updated_counts
+                        })
+            
+            # Для обычных POST запросов
+            if email_sent:
+                messages.success(request, f'Статус отклика успешно обновлён. Уведомление отправлено соискателю.')
             else:
-                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return JsonResponse({'status': 'success', 'message': 'Статус обновлен.'})
-                messages.success(request, 'Статус отклика успешно обновлён.')
+                if old_status_name != new_status_name:
+                    messages.warning(request, f'Статус отклика обновлён, но не удалось отправить уведомление соискателю.')
+                else:
+                    messages.success(request, 'Статус отклика успешно обновлён.')
         else:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'status': 'error', 'message': 'Ошибка при обновлении статуса.'})
@@ -448,6 +501,7 @@ def responses_list(request):
             return JsonResponse({'status': 'success'})
         return redirect('responses_list')
 
+    # Подготавливаем данные для шаблона
     response_data = []
     for response in responses:
         form = ResponseStatusUpdateForm(instance=response)
@@ -459,6 +513,8 @@ def responses_list(request):
     context = {
         'company': company,
         'response_data': response_data,
+        'counts': counts,
+        'current_status': current_status,
     }
     return render(request, 'compani/responses_list.html', context)
 
@@ -1093,3 +1149,59 @@ def send_hr_agent_credentials(hr_agent, password, company_name):
     except Exception as e:
         print(f"❌ [EMAIL] ОШИБКА отправки данных HR-агенту: {str(e)}")
         return False
+    
+# views.py
+@login_required
+def employee_profile(request):
+    if request.user.user_type != 'hragent':
+        messages.error(request, 'У вас нет доступа к этой странице.')
+        return redirect('home_comp')
+    
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Профиль сотрудника не найден.')
+        return redirect('home_comp')
+    
+    context = {
+        'employee': employee,
+        'user': request.user,
+    }
+    return render(request, 'compani/employee_profile.html', context)
+
+@login_required
+def edit_employee_profile(request):
+    if request.user.user_type != 'hragent':
+        messages.error(request, 'У вас нет доступа к этой странице.')
+        return redirect('home_comp')
+    
+    try:
+        employee = Employee.objects.get(user=request.user)
+    except Employee.DoesNotExist:
+        messages.error(request, 'Профиль сотрудника не найден.')
+        return redirect('home_comp')
+    
+    if request.method == 'POST':
+        form = EmployeeProfileForm(request.POST, instance=employee, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Профиль успешно обновлен!')
+            return redirect('employee_profile')
+        else:
+            # Отладочная информация
+            print("FORM ERRORS:", form.errors)
+            print("FORM NON FIELD ERRORS:", form.non_field_errors())
+            for field in form:
+                if field.errors:
+                    print(f"FIELD {field.name} ERRORS:", field.errors)
+            
+            messages.error(request, 'Пожалуйста, исправьте ошибки в форме.')
+    else:
+        form = EmployeeProfileForm(instance=employee, user=request.user)
+    
+    context = {
+        'employee': employee,
+        'user': request.user,
+        'form': form,
+    }
+    return render(request, 'compani/employee_edit_profile.html', context)

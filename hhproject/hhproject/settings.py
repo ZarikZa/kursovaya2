@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-@#42zn+hbk(qdky)s5o2@!oon$30c9_d0&n7(1nuww1$y*7@lf
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -42,10 +42,13 @@ INSTALLED_APPS = [
     'phonenumber_field',
     'compani',
     'dbbackup',
-    'admin_panel'
+    'admin_panel',
+    'django_prometheus',
 ]
 
 MIDDLEWARE = [
+    'django_prometheus.middleware.PrometheusBeforeMiddleware',
+    'django_prometheus.middleware.PrometheusAfterMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -76,8 +79,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'hhproject.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
     'default': {
@@ -96,8 +97,6 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -115,9 +114,6 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'ru'
 
 TIME_ZONE = 'Europe/Moscow'
@@ -127,28 +123,19 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static')
 ]
 
-# Медиафайлы (документы компаний, загружаемые файлы)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Настройки бэкапов - сохраняем в папку backups внутри MEDIA_ROOT
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': os.path.join(MEDIA_ROOT, 'backups')}
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Настройки email
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.mail.ru'
 EMAIL_PORT = 587
@@ -158,6 +145,5 @@ EMAIL_HOST_PASSWORD = 'JtqbeeSahTABKadzK0EU'
 DEFAULT_FROM_EMAIL = 'hr-labogency@mail.ru'
 SERVER_EMAIL = 'hr-labogency@mail.ru'
 
-# Дополнительные настройки
 EMAIL_TIMEOUT = 30
 EMAIL_USE_SSL = False

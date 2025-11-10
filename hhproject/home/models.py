@@ -217,7 +217,7 @@ class Response(models.Model):
         unique_together = ['applicants', 'vacancy']
     
     def __str__(self):
-        return f"Отклик {self.applicant} на {self.vacancy}"
+        return f"Отклик {self.applicants} на {self.vacancy}"
 
 class Favorites(models.Model):
     applicant = models.ForeignKey(Applicant, on_delete=models.CASCADE, verbose_name="Соискатель")

@@ -185,3 +185,60 @@ class UserEditForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['email', 'phone']
+
+class PasswordResetRequestForm(forms.Form):
+    email = forms.EmailField(
+        max_length=254, 
+        required=True,
+        label="Email",
+        widget=forms.EmailInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'example@email.com',
+            'autocomplete': 'email'
+        })
+    )
+
+class CodeVerificationForm(forms.Form):
+    code = forms.CharField(
+        max_length=6,
+        min_length=6,
+        required=True,
+        label="Код подтверждения", 
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите 6-значный код',
+            'autocomplete': 'one-time-code'
+        })
+    )
+
+class SetNewPasswordForm(forms.Form):
+    new_password1 = forms.CharField(
+        required=True,
+        label="Новый пароль",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Не менее 8 символов',
+            'autocomplete': 'new-password'
+        }),
+        min_length=8
+    )
+    
+    new_password2 = forms.CharField(
+        required=True,
+        label="Подтвердите пароль",
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Повторите пароль',
+            'autocomplete': 'new-password'
+        })
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('new_password1')
+        password2 = cleaned_data.get('new_password2')
+
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError("Пароли не совпадают")
+        
+        return cleaned_data

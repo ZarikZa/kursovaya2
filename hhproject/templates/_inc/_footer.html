@@ -9,18 +9,15 @@
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h5>Для соискателей</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light">Поиск вакансий</a></li>
-                        <li><a href="#" class="text-light">Создать резюме</a></li>
-                        <li><a href="#" class="text-light">Карьерные советы</a></li>
+                        <li><a href="{% url 'vakansi_page' %}" class="text-light">Поиск вакансий</a></li>
+                        <li><a href="{% url 'edit_applicant_profile' %}" class="text-light">Создать резюме</a></li>
                     </ul>
                 </div>
                 <div class="col-lg-2 col-md-6 mb-4">
                     <h5>Для работодателей</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light">Разместить вакансию</a></li>
-                        <li><a href="#" class="text-light">Поиск кандидатов</a></li>
-                        <li><a href="#" class="text-light">Тарифы</a></li>
-                    </ul>
+                        <li><a href="{% url 'vacancy_list' %}" class="text-light">Разместить вакансию</a></li>
+                     </ul>
                 </div>
             </div>
             <hr class="my-4">
