@@ -170,11 +170,11 @@ ProHR - Найди лучших сотрудников
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6 hero-content animate-on-scroll">
-                    <h1 class="display-3 fw-bold mb-4 animate__animated animate__fadeInUp">Найди лучших <span class="text-warning">сотрудников</span> с нами</h1>
-                    <p class="lead mb-5 animate__animated animate__fadeInUp animate__delay-1s">Более 50,000 талантливых специалистов ищут работу. Найди идеального кандидата для своей команды!</p>
-                    
-                  
-                </div>
+    <h1 class="display-3 fw-bold mb-4 animate__animated animate__fadeInUp">Найди лучших <span class="text-warning">сотрудников</span> с нами</h1>
+    <p class="lead mb-5 animate__animated animate__fadeInUp animate__delay-1s">
+        Более {{ active_applicants_count }} талантливых специалистов ищут работу. Найди идеального кандидата для своей команды!
+    </p>
+</div>
                 <div class="col-lg-6 text-center animate-on-scroll">
                     <img src="https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="HR Team" class="img-fluid rounded-3 shadow-lg animate__animated animate__zoomIn animate__delay-1s" style="max-height: 500px;">
                 </div>
@@ -182,43 +182,43 @@ ProHR - Найди лучших сотрудников
         </div>
     </section>
 
-    <section class="company-stats">
-        <div class="container">
-            <div class="row text-center mb-5">
-                <div class="col-12">
-                    <h2 class="display-5 fw-bold">Мы помогаем компаниям расти</h2>
-                    <p class="lead">Тысячи компаний уже нашли сотрудников через нашу платформу</p>
+   <section class="company-stats">
+    <div class="container">
+        <div class="row text-center mb-5">
+            <div class="col-12">
+                <h2 class="display-5 fw-bold">Мы помогаем компаниям расти</h2>
+                <p class="lead">Тысячи компаний уже нашли сотрудников через нашу платформу</p>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3 mb-4">
+                <div class="stat-card-company">
+                    <span class="stat-number-company">{{ active_applicants_count }}</span>
+                    <h5>Активных соискателей</h5>
                 </div>
             </div>
-            
-            <div class="row">
-                <div class="col-md-3 mb-4">
-                    <div class="stat-card-company animate-on-scroll">
-                        <span class="stat-number-company" data-count="50000">0</span>
-                        <h5>Активных соискателей</h5>
-                    </div>
+            <div class="col-md-3 mb-4">
+                <div class="stat-card-company">
+                    <span class="stat-number-company">{{ successful_hires_count }}</span>
+                    <h5>Успешных наймов</h5>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="stat-card-company animate-on-scroll">
-                        <span class="stat-number-company" data-count="12000">0</span>
-                        <h5>Успешных наймов</h5>
-                    </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="stat-card-company">
+                    <span class="stat-number-company">{{ returning_companies_percentage }}</span>
+                    <h5>% компаний возвращаются</h5>
                 </div>
-                <div class="col-md-3 mb-4">
-                    <div class="stat-card-company animate-on-scroll">
-                        <span class="stat-number-company" data-count="95">0</span>
-                        <h5>% компаний возвращаются</h5>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="stat-card-company animate-on-scroll">
-                        <span class="stat-number-company" data-count="48">0</span>
-                        <h5>Среднее время найма (часов)</h5>
-                    </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="stat-card-company">
+                    <span class="stat-number-company">{{ avg_hire_time }}</span>
+                    <h5>Среднее время найма (часов)</h5>
                 </div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
     <section class="company-features">
         <div class="container">
@@ -274,7 +274,6 @@ ProHR - Найди лучших сотрудников
                     {% else%}
                         <a href="{% url 'company_profile'%}" class="cta-btn-company me-3"><i class="fas fa-building me-2"></i> Посмотреть компанию</a>
                     {% endif%}
-                        
                 </div>
             </div>
         </div>

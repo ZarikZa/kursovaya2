@@ -1,4 +1,6 @@
 import random
+from django.http import JsonResponse
+import requests
 from .models import *
 from .forms import *
 from django.shortcuts import render, redirect, get_object_or_404
@@ -14,16 +16,85 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib import messages
 
+def get_client_ip(request):
+    """Получение IP-адреса клиента"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+def get_or_create_action_type(code, name):
+    """Получение или создание типа действия"""
+    action_type, created = ActionType.objects.get_or_create(
+        code=code,
+        defaults={'name': name}
+    )
+    return action_type
+
+def log_user_action(user, action_code, action_name, target_company=None, target_object=None, details="", request=None):
+    """
+    Логирование действий пользователя
+    """
+    action_type = get_or_create_action_type(action_code, action_name)
+    
+    target_object_id = None
+    target_content_type = ""
+    
+    if target_object:
+        target_object_id = target_object.id
+        target_content_type = target_object.__class__.__name__
+    
+    ip_address = get_client_ip(request) if request else None
+    user_agent = request.META.get('HTTP_USER_AGENT', '') if request else ''
+    
+    AdminLog.objects.create(
+        admin=user,
+        action=action_type,
+        target_company=target_company,
+        target_object_id=target_object_id,
+        target_content_type=target_content_type,
+        details=details,
+        ip_address=ip_address,
+        user_agent=user_agent
+    )
 
 def home_page(request):
-    return render(request, 'home.html')
+    """
+    Отображение главной страницы со статистикой
+    """
+    active_vacancies_count = Vacancy.objects.filter(
+        status__status_vacancies_name='Активна'
+    ).count()
+    
+    approved_companies_count = Company.objects.filter(
+        status=Company.STATUS_APPROVED
+    ).count()
+    
+    applicants_count = Applicant.objects.count()
+    
+    successful_responses_count = Response.objects.filter(
+        status__status_response_name='Принято'
+    ).count()
+    
+    context = {
+        'active_vacancies_count': active_vacancies_count,
+        'approved_companies_count': approved_companies_count,
+        'applicants_count': applicants_count,
+        'successful_responses_count': successful_responses_count,
+    }
+    
+    return render(request, 'home.html', context)
 
 @login_required
 def applicant_profile(request):
+    """
+    Просмотр профиля соискателя
+    """
     applicant = get_object_or_404(Applicant, user=request.user)
     
     favorites = Favorites.objects.filter(applicant=applicant).select_related('vacancy')
-    
     responses = Response.objects.filter(applicants=applicant).select_related('vacancy', 'status')
     
     context = {
@@ -32,7 +103,11 @@ def applicant_profile(request):
         'responses': responses,
     }
     return render(request, 'profile.html', context)
+
 def custom_login(request):
+    """
+    Кастомный вход в систему с проверкой статуса компании
+    """
     if request.user.is_authenticated:
         return redirect('home_page')
     
@@ -51,10 +126,23 @@ def custom_login(request):
                         return redirect('account_pending')
                     elif company.status == Company.STATUS_REJECTED:
                         return render(request, 'auth/login.html', {'form': form})
-                    else:
-                        print("DEBUG: Company approved, logging in")  
+                
+                remember_me = request.POST.get('remember_me')
+                if remember_me:
+                    request.session.set_expiry(60 * 60 * 24 * 30)  
+                else:
+                    request.session.set_expiry(0)
                 
                 login(request, user)
+                
+                # Логирование входа пользователя
+                log_user_action(
+                    user=user,
+                    action_code='user_login',
+                    action_name='Пользователь вошел в систему',
+                    details=f'Успешный вход в систему',
+                    request=request
+                )
                 
                 next_url = request.GET.get('next')
                 if next_url and next_url.startswith('/'):
@@ -73,8 +161,10 @@ def custom_login(request):
     
     return render(request, 'auth/login.html', {'form': form})
 
-
 class ApplicantRegisterView(CreateView):
+    """
+    Регистрация нового соискателя
+    """
     model = User
     form_class = ApplicantSignUpForm
     template_name = 'auth/register.html'
@@ -82,6 +172,15 @@ class ApplicantRegisterView(CreateView):
     def form_valid(self, form):
         user = form.save()
         login(self.request, user)
+        
+        # Логирование регистрации
+        log_user_action(
+            user=user,
+            action_code='user_registered',
+            action_name='Пользователь зарегистрировался',
+            details=f'Зарегистрирован новый аккаунт соискателя',
+            request=self.request
+        )
         
         next_url = self.request.GET.get('next')
         
@@ -93,51 +192,38 @@ class ApplicantRegisterView(CreateView):
     def form_invalid(self, form):
         return self.render_to_response(self.get_context_data(form=form))
 
-
-class AnaliticRegisterView(CreateView):
-    model = User
-    form_class = AnaliticSignUpForm
-    template_name = 'auth/register_analitic.html'
-    
-    def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)
-
-class HRAgentRegisterView(CreateView):
-    model = User
-    form_class = HRAgentSignUpForm
-    template_name = 'auth/register_hr.html'
-    
-    def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)
-
-class AdminSiteRegisterView(CreateView):
-    model = User
-    form_class = AdminSiteSignUpForm
-    template_name = 'auth/register_admin.html'
-    
-    def form_valid(self, form):
-        user = form.save()
-        login(self.request, user)
-
 def custom_logout(request):
+    """
+    Выход из системы
+    """
+    # Логирование выхода
+    if request.user.is_authenticated:
+        log_user_action(
+            user=request.user,
+            action_code='user_logout',
+            action_name='Пользователь вышел из системы',
+            details=f'Выход из системы',
+            request=request
+        )
+    
     logout(request)
     next_url = request.GET.get('next')
         
     if next_url and next_url.startswith('/'):
         return redirect(next_url)
     else:
-        return redirect('home_page')  
+        return redirect('home_page')
     
 def vakansii_page(request):
+    """
+    Отображение списка вакансий с фильтрацией и поиском
+    """
     vacancies = Vacancy.objects.select_related(
         'company', 
         'work_conditions', 
         'status'
     ).filter(status__status_vacancies_name='Активна')
     
-    # Обработка фильтров
     search_query = request.GET.get('search', '')
     if search_query:
         vacancies = vacancies.filter(
@@ -146,17 +232,14 @@ def vakansii_page(request):
             Q(company__name__icontains=search_query)
         )
     
-    # Фильтр по типу занятости
     employment_filters = request.GET.getlist('employment')
     if employment_filters:
         vacancies = vacancies.filter(work_conditions__work_conditions_name__in=employment_filters)
     
-    # Фильтр по опыту работы (предполагается поле experience)
     experience_filters = request.GET.getlist('experience')
     if experience_filters:
-        vacancies = vacancies.filter(experience__in=experience_filters)  # Адаптируй под модель
+        vacancies = vacancies.filter(experience__in=experience_filters)
     
-    # Фильтр по зарплате
     salary_from = request.GET.get('salary_from')
     salary_to = request.GET.get('salary_to')
     if salary_from:
@@ -164,7 +247,6 @@ def vakansii_page(request):
     if salary_to:
         vacancies = vacancies.filter(salary_max__lte=salary_to)
     
-    # Сортировка
     sort_by = request.GET.get('sort', 'newest')
     if sort_by == 'salary_high':
         vacancies = vacancies.order_by('-salary_max')
@@ -173,11 +255,10 @@ def vakansii_page(request):
     else: 
         vacancies = vacancies.order_by('-created_date')
     
-    paginator = Paginator(vacancies, 10)  # 10 вакансий на страницу
+    paginator = Paginator(vacancies, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Передача вариантов типов занятости и выбранных фильтров
     work_conditions = WorkConditions.objects.all()
     selected_employments = request.GET.getlist('employment')
     selected_experiences = request.GET.getlist('experience')
@@ -205,9 +286,24 @@ def vakansii_page(request):
     return render(request, 'vakans.html', context)
 
 def vacancy_detail(request, vacancy_id):
+    """
+    Детальное отображение вакансии
+    """
     vacancy = get_object_or_404(Vacancy.objects.select_related('company', 'work_conditions', 'status'), id=vacancy_id)
     vacancy.views += 1
     vacancy.save(update_fields=['views'])
+    
+    # Логирование просмотра вакансии
+    if request.user.is_authenticated:
+        log_user_action(
+            user=request.user,
+            action_code='vacancy_viewed',
+            action_name='Просмотр вакансии',
+            target_object=vacancy,
+            target_company=vacancy.company,
+            details=f'Просмотр вакансии "{vacancy.position}"',
+            request=request
+        )
     
     is_favorite = False
     has_response = False
@@ -228,6 +324,9 @@ def vacancy_detail(request, vacancy_id):
     return render(request, 'vacancy_detail.html', context)
 
 def apply_to_vacancy(request, vacancy_id):
+    """
+    Подача отклика на вакансию
+    """
     if not request.user.is_authenticated or request.user.user_type != 'applicant':
         return redirect('vacancy_detail', vacancy_id=vacancy_id)
     
@@ -252,12 +351,22 @@ def apply_to_vacancy(request, vacancy_id):
             defaults={'status_response_name': 'Новый'}
         )
         
-        Response.objects.create(
+        response = Response.objects.create(
             applicants=applicant,
             vacancy=vacancy,
             status=status_new
         )
         
+        # Логирование отклика на вакансию
+        log_user_action(
+            user=request.user,
+            action_code='vacancy_applied',
+            action_name='Отклик на вакансию',
+            target_object=vacancy,
+            target_company=vacancy.company,
+            details=f'Отклик на вакансию "{vacancy.position}" в компании {vacancy.company.name}',
+            request=request
+        )
         
     except Exception as e:
         pass
@@ -265,6 +374,9 @@ def apply_to_vacancy(request, vacancy_id):
 
 @login_required
 def add_to_favorites(request, vacancy_id):
+    """
+    Добавление вакансии в избранное
+    """
     if request.user.user_type != 'applicant':
         return redirect('vacancy_detail', vacancy_id=vacancy_id)
     
@@ -282,6 +394,17 @@ def add_to_favorites(request, vacancy_id):
         else:
             Favorites.objects.create(applicant=applicant, vacancy=vacancy)
             
+            # Логирование добавления в избранное
+            log_user_action(
+                user=request.user,
+                action_code='favorite_added',
+                action_name='Добавлено в избранное',
+                target_object=vacancy,
+                target_company=vacancy.company,
+                details=f'Вакансия "{vacancy.position}" добавлена в избранное',
+                request=request
+            )
+            
     except Applicant.DoesNotExist:
         pass
     
@@ -289,6 +412,9 @@ def add_to_favorites(request, vacancy_id):
 
 @login_required
 def remove_from_favorites(request, vacancy_id):
+    """
+    Удаление вакансии из избранного
+    """
     if request.user.user_type != 'applicant':
         return redirect('vacancy_detail', vacancy_id=vacancy_id)
     
@@ -303,15 +429,28 @@ def remove_from_favorites(request, vacancy_id):
         
         if favorite:
             favorite.delete()
+            
+            # Логирование удаления из избранного
+            log_user_action(
+                user=request.user,
+                action_code='favorite_removed',
+                action_name='Удалено из избранного',
+                target_object=vacancy,
+                target_company=vacancy.company,
+                details=f'Вакансия "{vacancy.position}" удалена из избранного',
+                request=request
+            )
        
     except Applicant.DoesNotExist:
         pass
     
     return redirect('vacancy_detail', vacancy_id=vacancy_id)
 
-
 @login_required
 def edit_applicant_profile(request):
+    """
+    Редактирование профиля соискателя
+    """
     if request.user.user_type != 'applicant':
         return redirect('home_page')
     
@@ -324,6 +463,16 @@ def edit_applicant_profile(request):
         if form.is_valid() and user_form.is_valid():
             form.save()
             user_form.save()
+            
+            # Логирование обновления профиля
+            log_user_action(
+                user=request.user,
+                action_code='profile_updated',
+                action_name='Профиль обновлен',
+                details='Профиль соискателя обновлен',
+                request=request
+            )
+            
             return redirect('applicant_profile')
     else:
         form = ApplicantEditForm(instance=applicant)
@@ -337,20 +486,35 @@ def edit_applicant_profile(request):
 
 @login_required
 def delete_applicant_profile(request):
+    """
+    Удаление профиля соискателя
+    """
     if request.user.user_type != 'applicant':
         return redirect('home_page')
     
     if request.method == 'POST':
         user = request.user
+        
+        # Логирование удаления профиля
+        log_user_action(
+            user=user,
+            action_code='profile_deleted',
+            action_name='Профиль удален',
+            details='Профиль соискателя удален',
+            request=request
+        )
+        
         user.delete()
         return redirect('home_page')
     
     return redirect('applicant_profile')
 
-
 User = get_user_model()
 
 def password_reset_request(request):
+    """
+    Запрос сброса пароля
+    """
     if request.method == 'POST':
         form = PasswordResetRequestForm(request.POST)
         if form.is_valid():
@@ -362,9 +526,18 @@ def password_reset_request(request):
                 
                 request.session['reset_email'] = email
                 request.session['reset_code'] = reset_code
-                request.session['reset_attempts'] = 3  # 3 попытки ввода кода
+                request.session['reset_attempts'] = 3
                 
                 send_reset_code_email(user, reset_code)
+                
+                # Логирование запроса сброса пароля
+                log_user_action(
+                    user=user,
+                    action_code='password_reset_requested',
+                    action_name='Запрос сброса пароля',
+                    details='Запрос сброса пароля',
+                    request=request
+                )
                 
                 return redirect('password_reset_verify')
                 
@@ -377,7 +550,9 @@ def password_reset_request(request):
     return render(request, 'password_reset_request.html', {'form': form})
 
 def password_reset_verify(request):
-    # Проверяем, что пользователь прошел первый шаг
+    """
+    Подтверждение кода сброса пароля
+    """
     if 'reset_email' not in request.session:
         messages.error(request, 'Сначала введите ваш email.')
         return redirect('password_reset_request')
@@ -390,16 +565,13 @@ def password_reset_verify(request):
             attempts = request.session.get('reset_attempts', 3)
             
             if entered_code == correct_code:
-                # Код верный, переходим к смене пароля
                 request.session['code_verified'] = True
                 return redirect('password_reset_new')
             else:
-                # Неверный код
                 attempts -= 1
                 request.session['reset_attempts'] = attempts
                 
                 if attempts <= 0:
-                    # Превышено количество попыток
                     del request.session['reset_email']
                     del request.session['reset_code']
                     del request.session['reset_attempts']
@@ -418,7 +590,9 @@ def password_reset_verify(request):
     })
 
 def password_reset_new(request):
-    # Проверяем, что код верифицирован
+    """
+    Установка нового пароля
+    """
     if not request.session.get('code_verified'):
         messages.error(request, 'Сначала подтвердите ваш email.')
         return redirect('password_reset_request')
@@ -434,12 +608,29 @@ def password_reset_new(request):
                 user.set_password(new_password)
                 user.save()
                 
-                # Очищаем сессию
+                # Логирование успешного сброса пароля
+                log_user_action(
+                    user=user,
+                    action_code='password_reset_success',
+                    action_name='Пароль успешно сброшен',
+                    details='Пароль успешно сброшен',
+                    request=request
+                )
+                
                 request.session.flush()
                 
                 messages.success(request, 'Пароль успешно изменен! Теперь вы можете войти с новым паролем.')
-                return redirect('login_user')
-                
+                if user.is_authenticated:
+                    match user.user_type:
+                        case "applicant":
+                            return redirect('applicant_profile')
+                        case "compani":
+                            return redirect('company_profile')
+                        case "hragent":
+                            return redirect('employee_profile')
+                if user.user_type == "applicant":
+                    return redirect('login_user')
+
             except User.DoesNotExist:
                 messages.error(request, 'Ошибка. Пользователь не найден.')
                 return redirect('password_reset_request')
@@ -449,6 +640,9 @@ def password_reset_new(request):
     return render(request, 'password_reset_new.html', {'form': form})
 
 def send_reset_code_email(user, code):
+    """
+    Отправка кода сброса пароля по email
+    """
     user_email = user.email
     first_name = user.first_name or 'Пользователь'
     
@@ -559,7 +753,6 @@ def send_reset_code_email(user, code):
         </html>
         """
         
-        # Текстовая версия
         plain_message = f"""
         Здравствуйте, {first_name}!
 
@@ -591,3 +784,182 @@ def send_reset_code_email(user, code):
     except Exception as e:
         print(f"❌ [EMAIL] Ошибка отправки кода: {str(e)}")
         return False
+
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import json
+
+@require_POST
+@csrf_exempt
+def update_theme(request):
+    """
+    Обновление темы для авторизованного пользователя
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'error', 'message': 'User not authenticated'})
+    
+    try:
+        data = json.loads(request.body)
+        theme = data.get('theme')
+        
+        print(f"Updating theme for user {request.user.username} to {theme}")
+        
+        if theme not in ['light', 'dark']:
+            return JsonResponse({'status': 'error', 'message': 'Invalid theme'})
+        
+        user = request.user
+        
+        if hasattr(user, 'applicant'):
+            user.applicant.theme = theme
+            user.applicant.save()
+            user_type = 'applicant'
+            print(f"Theme updated for applicant: {theme}")
+            
+        elif hasattr(user, 'employee'):
+            user.employee.theme = theme
+            user.employee.save()
+            user_type = 'employee'
+            print(f"Theme updated for employee: {theme}")
+            
+        elif hasattr(user, 'company'):
+            user.company.theme = theme
+            user.company.save()
+            user_type = 'company'
+            print(f"Theme updated for company: {theme}")
+            
+        else:
+            return JsonResponse({'status': 'error', 'message': 'User type not found'})
+        
+        # Логирование изменения темы
+        log_user_action(
+            user=user,
+            action_code='theme_changed',
+            action_name='Тема изменена',
+            details=f'Тема изменена на: {theme}',
+            request=request
+        )
+        
+        return JsonResponse({
+            'status': 'success', 
+            'message': f'Theme updated for {user_type}',
+            'theme': theme,
+            'user_type': user_type
+        })
+        
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'})
+    except Exception as e:
+        print(f"Error updating theme: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@login_required
+def create_complaint(request, vacancy_id):
+    """
+    Создание жалобы на вакансию
+    """
+    vacancy = get_object_or_404(Vacancy, id=vacancy_id)
+    
+    existing_complaint = Complaint.objects.filter(
+        vacancy=vacancy, 
+        complainant=request.user
+    ).first()
+    
+    if existing_complaint:
+        messages.warning(request, f'Вы уже подавали жалобу на эту вакансию. Статус: {existing_complaint.get_status_display()}')
+        return redirect('vacancy_detail', vacancy_id=vacancy_id)
+    
+    if request.method == 'POST':
+        form = ComplaintForm(request.POST)
+        if form.is_valid():
+            complaint = form.save(commit=False)
+            complaint.vacancy = vacancy
+            complaint.complainant = request.user
+            complaint.save()
+            
+            # Логирование создания жалобы
+            log_user_action(
+                user=request.user,
+                action_code='complaint_created',
+                action_name='Создана жалоба',
+                target_object=vacancy,
+                target_company=vacancy.company,
+                details=f'Создана жалоба на вакансию "{vacancy.position}"',
+                request=request
+            )
+            
+            messages.success(request, 'Жалоба успешно отправлена на рассмотрение.')
+            return redirect('vacancy_detail', vacancy_id=vacancy_id)
+    else:
+        form = ComplaintForm()
+    
+    return render(request, 'complaints/create_complaint.html', {
+        'form': form,
+        'vacancy': vacancy
+    })
+
+@login_required
+def complaint_success(request, vacancy_id):
+    """
+    Страница успешной отправки жалобы
+    """
+    vacancy = get_object_or_404(Vacancy, id=vacancy_id)
+    return render(request, 'complaints/complaint_success.html', {'vacancy': vacancy})
+
+@login_required
+def check_existing_complaint(request, vacancy_id):
+    """
+    Проверка существующей жалобы (AJAX)
+    """
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        vacancy = get_object_or_404(Vacancy, id=vacancy_id)
+        existing_complaint = Complaint.objects.filter(
+            vacancy=vacancy, 
+            complainant=request.user
+        ).first()
+        
+        if existing_complaint:
+            return JsonResponse({
+                'exists': True,
+                'status': existing_complaint.get_status_display(),
+                'type': existing_complaint.get_complaint_type_display()
+            })
+        return JsonResponse({'exists': False})
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .influxdb_metrics import InfluxDBSender
+
+@csrf_exempt
+def send_metrics(request):
+    """
+    Отправка метрик в InfluxDB
+    """
+    if request.method == 'GET':
+        try:
+            sender = InfluxDBSender()
+            results = sender.send_all_metrics()
+            
+            # Логирование отправки метрик
+            if request.user.is_authenticated:
+                log_user_action(
+                    user=request.user,
+                    action_code='metrics_sent',
+                    action_name='Метрики отправлены',
+                    details='Отправка метрик в InfluxDB',
+                    request=request
+                )
+            
+            return JsonResponse({
+                'status': 'ура',
+                'message': 'Метрики отправлены',
+                'results': results
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'status': 'ошибка',
+                'message': str(e)
+            }, status=500)

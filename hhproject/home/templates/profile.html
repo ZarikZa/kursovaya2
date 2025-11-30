@@ -3,11 +3,6 @@
 
 {% block title %}Профиль соискателя - ProHR{% endblock %}
 
-{% block style %}
-{% include '_inc/style.html' %}
-{% include '_inc/style_prof.html' %}
-{% endblock %}
-
 {% block content %}
 <div class="profile-section">
     <div class="profile-container">
@@ -22,6 +17,11 @@
                 </div>
                 {% if request.user == user and request.user.user_type == 'applicant' %}
                 <div class="profile-actions">
+                    <!-- Кнопка смены темы -->
+                    <button class="theme-toggle-btn-profile" onclick="toggleTheme()" title="Переключить тему">
+                        <span class="theme-icon">🌓</span>
+                    </button>
+                    
                     <a href="{% url 'edit_applicant_profile' %}" class="btn btn-edit">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -187,7 +187,6 @@
     </div>
 </div>
 
-<!-- Модальное окно подтверждения удаления показываем только самому соискателю -->
 {% if request.user == user and request.user.user_type == 'applicant' %}
 <div id="deleteModal" class="modal">
     <div class="modal-content">
@@ -229,60 +228,25 @@ window.onclick = function(event) {
     }
 }
 {% endif %}
+
+// Дополнительная инициализация для страницы профиля
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Profile page loaded');
+    
+    // Проверяем синхронизацию темы
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const savedTheme = localStorage.getItem('theme');
+    
+    if (currentTheme !== savedTheme && savedTheme) {
+        console.log('Fixing theme sync:', currentTheme, '->', savedTheme);
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Обновляем иконки
+        const themeIcons = document.querySelectorAll('.theme-icon');
+        themeIcons.forEach(icon => {
+            icon.textContent = savedTheme === 'dark' ? '🌙' : '☀️';
+        });
+    }
+});
 </script>
-
-<style>
-/* Стили для режима просмотра */
-.view-only-label {
-    padding: 8px 16px;
-    background: #f3f4f6;
-    color: #6b7280;
-    border-radius: 50px;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.view-only-message {
-    text-align: center;
-    padding: 40px 20px;
-    position: relative;
-}
-
-.view-only-message .back-button {
-    position: absolute;
-    top: 0;
-    left: 0;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #3b82f6;
-    color: white;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 500;
-    font-size: 0.9rem;
-}
-
-.view-only-message .back-button:hover {
-    background: #2563eb;
-}
-
-.view-only-message svg {
-    color: #6b7280;
-    margin-bottom: 20px;
-}
-
-.view-only-message h3 {
-    color: #374151;
-    margin-bottom: 10px;
-}
-
-.view-only-message p {
-    color: #6b7280;
-    line-height: 1.5;
-    max-width: 400px;
-    margin: 0 auto;
-}
-</style>
 {% endblock %}

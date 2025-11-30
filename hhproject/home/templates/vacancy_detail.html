@@ -3,11 +3,6 @@
 
 {% block title %}{{ vacancy.position }} - {{ vacancy.company.name }} - CareerHub{% endblock %}
 
-{% block style %}
-{% include '_inc/style_vacansDet.html' %}
-{% include '_inc/style.html' %}
-{% endblock %}
-
 {% block content %}
 <div class="vacancy-detail-section">
     <div class="container">
@@ -39,6 +34,10 @@
                                 <span>📍 {{ vacancy.city }}</span>
                                 <span>•</span>
                                 <span>{{ vacancy.work_conditions.work_conditions_name }}</span>
+                                {% if vacancy.category %}
+                                <span>•</span>
+                                <span class="vacancy-category {{ vacancy.category|lower }}">{{ vacancy.category }}</span>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -69,6 +68,14 @@
                                 В избранное
                             </a>
                         {% endif %}
+
+                        <div class="complaint-action">
+                                <a href="{% url 'create_complaint' vacancy.id %}" class="btn btn-report">
+                                    <span>⚠️</span>
+                                    Пожаловаться
+                                </a>
+                        </div>
+
                     {% elif not user.is_authenticated %}
                         <a href="{% url 'login_user' %}?next={{ request.path }}" class="btn btn-primary">
                             <span>📨</span>
@@ -99,14 +106,9 @@
                     <div class="detail-label">Дата публикации</div>
                     <div class="detail-value">{{ vacancy.created_date|date:"d.m.Y" }}</div>
                 </div>
-              
             </div>
 
-            <div class="badges-container">
-                <span class="badge badge-primary">{{ vacancy.work_conditions.work_conditions_name }}</span>
-                <span class="badge badge-warning">Опыт {{ vacancy.experience|default:'Не указан' }}</span>
-                <span class="badge badge-primary">{{ vacancy.category }}</span>
-            </div>
+           
         </div>
 
         <div class="content-grid">

@@ -21,5 +21,9 @@ urlpatterns = [
     path('password-reset/', password_reset_request, name='password_reset_request'),
     path('password-reset/verify/', password_reset_verify, name='password_reset_verify'),
     path('password-reset/new/', password_reset_new, name='password_reset_new'),
-
-]
+    path('update-theme/', update_theme, name='update_theme'),
+    path('vacancy/<int:vacancy_id>/complaint/', create_complaint, name='create_complaint'),
+    path('vacancy/<int:vacancy_id>/complaint/success/', complaint_success, name='complaint_success'),
+    path('vacancy/<int:vacancy_id>/check-complaint/', check_existing_complaint, name='check_complaint'),
+    path('update-metrics/', send_metrics, name='update_metrics'),
+]   

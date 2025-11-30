@@ -2,12 +2,6 @@
 {% load static %}
 
 {% block title %}Профиль компании - ProHR{% endblock %}
-
-{% block style %}
-    {% include '_inc/style.html' %}
-    {% include '_inc/style_prof.html' %}
-{% endblock %}
-
 {%block header%}
     {%include '_inc/header.html'%}
 {%endblock%}
@@ -23,9 +17,33 @@
                     <h1>{{ company.name }}</h1>
                     <div class="email">{{ user.email }}</div>
                 </div>
+                {% if request.user == user and request.user.user_type == 'company' %}
                 <div class="profile-actions">
-                    <a href="{% url 'edit_company_profile' %}" class="btn btn-primary">Редактировать профиль</a>
+                    <button class="theme-toggle-btn-profile" onclick="toggleTheme()" title="Переключить тему">
+                        <span class="theme-icon">🌓</span>
+                    </button>
+                    
+                    <a href="{% url 'edit_company_profile' %}" class="btn btn-edit">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Редактировать
+                    </a>
+                    <button type="button" class="btn btn-delete" onclick="openDeleteModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"></path>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Удалить профиль
+                    </button>
                 </div>
+                {% else %}
+                    <div class="profile-actions">
+                    <span class="view-only-label">Просмотр профиля</span>
+                </div>
+                {% endif %}
             </div>
             
             <div class="profile-details">
@@ -43,12 +61,19 @@
                 </div>
                 <div class="detail-item" style="--index: 4">
                     <div class="detail-label">Телефон</div>
-                    <div class="detail-value">{{ user.phone }}</div>
+                    <div class="detail-value">
+                        {% if user.phone %}
+                            {{ user.phone }}
+                        {% else %}
+                            Не указан
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- Секции вакансий и сотрудников -->
+        <!-- Активные вакансии и сотрудники показываем только самой компании -->
+        {% if request.user == user and request.user.user_type == 'company' %}
         <div class="profile-sections">
             <!-- Активные вакансии -->
             <div class="section-card">
@@ -61,13 +86,23 @@
                 
                 {% if vacancies %}
                     {% for vacancy in vacancies %}
-                    <div class="favorite-item">
+                    <a href="{% url 'vacancy_detail' vacancy.id %}" class="vacancy-item clickable-item">
                         <div class="vacancy-title">{{ vacancy.position }}</div>
-                        <div class="vacancy-salary">{{ vacancy.salary_min|floatformat:"0" }} - {{ vacancy.salary_max|floatformat:"0" }} ₽</div>
-                        <div class="response-status status-{{ vacancy.status.status_vacancies_name|lower }}">
+                        <div class="vacancy-salary">
+                            {% if vacancy.salary_min and vacancy.salary_max %}
+                                {{ vacancy.salary_min|floatformat:"0" }} - {{ vacancy.salary_max|floatformat:"0" }} ₽
+                            {% elif vacancy.salary_min %}
+                                от {{ vacancy.salary_min|floatformat:"0" }} ₽
+                            {% elif vacancy.salary_max %}
+                                до {{ vacancy.salary_max|floatformat:"0" }} ₽
+                            {% else %}
+                                Зарплата не указана
+                            {% endif %}
+                        </div>
+                        <div class="vacancy-title">
                             {{ vacancy.status.status_vacancies_name }}
                         </div>
-                    </div>
+                    </a>
                     {% endfor %}
                 {% else %}
                     <div class="empty-state">
@@ -79,7 +114,6 @@
                 {% endif %}
             </div>
             
-            <!-- Сотрудники -->
             <div class="section-card">
                 <h3>
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -93,10 +127,10 @@
                 
                 {% if employees %}
                     {% for employee in employees %}
-                    <div class="response-item">
+                    <div class="employee-item clickable-item">
                         <div class="vacancy-title">{{ employee.first_name }} {{ employee.last_name }}</div>
-                        <div class="vacancy-company">{{ employee.role.role_name }}</div>
-                        <div class="response-status status-{{ employee.access_level|lower }}">
+                        <div class="vacancy-salary">{{ employee.role.role_name }}</div>
+                        <div class="vacancy-salary">
                             {{ employee.access_level }}
                         </div>
                     </div>
@@ -114,6 +148,125 @@
                 {% endif %}
             </div>
         </div>
+        {% elif request.user != user %}
+        <div class="profile-sections">
+            <div class="section-card">
+                <div class="view-only-message">
+                    <a href="{% url 'vacancies_list' %}" class="back-button">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        Назад к вакансиям
+                    </a>
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <h3>Режим просмотра</h3>
+                    <p>Вы просматриваете профиль компании. Внутренние разделы (вакансии и сотрудники) доступны только владельцу компании.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
+
+{% if request.user == user and request.user.user_type == 'company' %}
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Подтверждение удаления</h3>
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p>Вы уверены, что хотите удалить профиль компании? Это действие нельзя будет отменить.</p>
+            <p>Все данные компании, включая вакансии и сотрудников, будут удалены.</p>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-cancel" onclick="closeDeleteModal()">Отмена</button>
+            <form method="post" action="{% url 'delete_company_profile' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-delete-confirm">Удалить профиль</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<input type="hidden" id="csrf_token" value="{{ csrf_token }}">
+
+<script>
+{% if request.user == user and request.user.user_type == 'company' %}
+function openDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'block';
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('deleteModal');
+    if (event.target == modal) {
+        closeDeleteModal();
+    }
+}
+{% endif %}
+
+function toggleTheme() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+    
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    const themeIcons = document.querySelectorAll('.theme-icon');
+    themeIcons.forEach(icon => {
+        icon.textContent = newTheme === 'dark' ? '🌙' : '☀️';
+    });
+    
+    updateThemeInDatabase(newTheme);
+}
+
+async function updateThemeInDatabase(theme) {
+    console.log('Отправка темы в БД:', theme);
+    
+    try {
+        const csrfToken = document.getElementById('csrf_token').value;
+        
+        const response = await fetch('/update-theme/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                theme: theme,
+                user_type: 'company'
+            })
+        });
+
+        const result = await response.json();
+        console.log('Ответ сервера:', result);
+        
+        if (response.ok) {
+            console.log('Тема успешно сохранена в БД');
+        } else {
+            console.error('Ошибка при сохранении темы в БД:', result);
+        }
+    } catch (error) {
+        console.error('Ошибка сети:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    const themeIcons = document.querySelectorAll('.theme-icon');
+    themeIcons.forEach(icon => {
+        icon.textContent = currentTheme === 'dark' ? '🌙' : '☀️';
+    });
+});
+</script>
 {% endblock %}

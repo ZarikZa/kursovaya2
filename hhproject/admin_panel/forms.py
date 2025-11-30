@@ -11,16 +11,16 @@ class CompanyModerationForm(forms.ModelForm):
             })
         }
 
-class BackupForm(forms.Form):
+
+class BackupUploadForm(forms.Form):
     backup_file = forms.FileField(
         label='Файл бэкапа',
-        required=False,
+        help_text='Поддерживаемые форматы: .zip, .json',
         widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.sql,.zip,.dat,.backup'
+            'accept': '.zip,.json',
+            'class': 'file-input'
         })
     )
-
 
 class SiteAdminCreateForm(forms.ModelForm):
     first_name = forms.CharField(
@@ -188,3 +188,46 @@ class SiteAdminEditForm(forms.ModelForm):
                 employee.user.save()
                 employee.save()
         return employee
+from django.contrib.auth.forms import UserChangeForm
+
+class AdminProfileEditForm(UserChangeForm):
+    phone = forms.CharField(
+        max_length=80,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Введите номер телефона'
+        }),
+        label='Телефон'
+    )
+    
+    first_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Введите имя'
+        }),
+        label='Имя'
+    )
+    
+    last_name = forms.CharField(
+        max_length=30,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'placeholder': 'Введите фамилию'
+        }),
+        label='Фамилия'
+    )
+
+    class Meta:
+        model = User
+        fields = ['email', 'phone', 'first_name', 'last_name']
+        widgets = {
+            'email': forms.EmailInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Введите email'
+            }),
+        }
+    

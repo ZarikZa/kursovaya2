@@ -334,6 +334,54 @@ class HRAgentCreateForm(BaseUserCreationForm):
                 access_level='hr'
             )
         return user
+from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
+
+class HRAgentImportForm(forms.Form):
+    csv_file = forms.FileField(
+        label='CSV файл',
+        help_text='Файл должен содержать колонки: first_name, last_name, email, phone. Рекомендуемая кодировка: UTF-8',
+        validators=[FileExtensionValidator(allowed_extensions=['csv'])],
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': '.csv',
+            'required': True
+        })
+    )
+
+    def clean_csv_file(self):
+        csv_file = self.cleaned_data['csv_file']
+        
+        if not csv_file.name.endswith('.csv'):
+            raise ValidationError('Файл должен быть в формате CSV (.csv)')
+        
+        # Проверяем размер файла (максимум 5MB)
+        if csv_file.size > 5 * 1024 * 1024:
+            raise ValidationError('Файл слишком большой. Максимальный размер: 5MB')
+        
+        if csv_file.size == 0:
+            raise ValidationError('Файл пустой')
+        
+        # Пробуем прочитать файл для проверки кодировки
+        try:
+            sample = csv_file.read(1024)  # Читаем первые 1024 байта
+            csv_file.seek(0)  # Возвращаем позицию чтения
+            
+            # Пробуем разные кодировки
+            encodings = ['utf-8-sig', 'cp1251', 'windows-1251', 'iso-8859-1', 'utf-8']
+            for encoding in encodings:
+                try:
+                    sample.decode(encoding)
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                raise ValidationError('Не удалось определить кодировку файла. Пожалуйста, сохраните файл в UTF-8.')
+                
+        except Exception as e:
+            raise ValidationError(f'Ошибка при проверке файла: {str(e)}')
+        
+        return csv_file
 
 class HRAgentEditForm(forms.ModelForm):
     email = forms.EmailField(

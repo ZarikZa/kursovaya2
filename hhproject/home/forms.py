@@ -1,7 +1,9 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from .models import User, Company, Applicant, Employee, Role
-
+from .models import User, Company, Applicant, Employee, Role, Complaint
+from django.utils import timezone
+from datetime import timedelta
+from django.core.exceptions import ValidationError
 
 class CustomAuthenticationForm(AuthenticationForm):
     username = forms.EmailField(label='Email')
@@ -39,7 +41,7 @@ class BaseUserCreationForm(UserCreationForm):
         if commit:
             user.save()
         return user
-    
+
 class ApplicantSignUpForm(BaseUserCreationForm):
     first_name = forms.CharField(
         max_length=80, 
@@ -100,6 +102,28 @@ class ApplicantSignUpForm(BaseUserCreationForm):
             'autocomplete': 'new-password'
         })
     
+    def clean_birth_date(self):
+        birth_date = self.cleaned_data.get('birth_date')
+        
+        if birth_date:
+            today = timezone.now().date()
+            
+            # Проверка что дата не в будущем
+            if birth_date > today:
+                raise ValidationError(
+                    "Дата рождения не может быть в будущем."
+                )
+            
+            # Проверка возраста (16 лет)
+            min_age_date = today - timedelta(days=365 * 16 + 4)  # 16 лет + 4 дня для високосных годов
+            
+            if birth_date > min_age_date:
+                raise ValidationError(
+                    "Для регистрации вам должно быть не менее 16 лет."
+                )
+        
+        return birth_date
+    
     def save(self, commit=True):
         user = super().save(commit=False)
         user.user_type = 'applicant'
@@ -112,66 +136,8 @@ class ApplicantSignUpForm(BaseUserCreationForm):
                 birth_date=self.cleaned_data['birth_date']
             )
         return user
-    
 
 
-class AnaliticSignUpForm(BaseUserCreationForm):
-    first_name = forms.CharField(max_length=80, required=True, label="Имя")
-    last_name = forms.CharField(max_length=80, required=True, label="Фамилия")
-    
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.user_type = 'analitic'
-        if commit:
-            user.save()
-            role, created = Role.objects.get_or_create(role_name='Аналитик')
-            Employee.objects.create(
-                user=user,
-                first_name=self.cleaned_data['first_name'],
-                last_name=self.cleaned_data['last_name'],
-                role=role,
-                access_level='analitic'
-            )
-        return user
-
-class HRAgentSignUpForm(BaseUserCreationForm):
-    first_name = forms.CharField(max_length=80, required=True, label="Имя")
-    last_name = forms.CharField(max_length=80, required=True, label="Фамилия")
-    
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.user_type = 'hragent'
-        if commit:
-            user.save()
-            role, created = Role.objects.get_or_create(role_name='HR агент')
-            Employee.objects.create(
-                user=user,
-                first_name=self.cleaned_data['first_name'],
-                last_name=self.cleaned_data['last_name'],
-                role=role,
-                access_level='hr'
-            )
-        return user
-
-class AdminSiteSignUpForm(BaseUserCreationForm):
-    first_name = forms.CharField(max_length=80, required=True, label="Имя")
-    last_name = forms.CharField(max_length=80, required=True, label="Фамилия")
-    
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.user_type = 'adminsite'
-        if commit:
-            user.save()
-            role, created = Role.objects.get_or_create(role_name='Админ сайта')
-            Employee.objects.create(
-                user=user,
-                first_name=self.cleaned_data['first_name'],
-                last_name=self.cleaned_data['last_name'],
-                role=role,
-                access_level='full'
-            )
-        return user
-    
 class ApplicantEditForm(forms.ModelForm):
     class Meta:
         model = Applicant
@@ -242,3 +208,26 @@ class SetNewPasswordForm(forms.Form):
             raise forms.ValidationError("Пароли не совпадают")
         
         return cleaned_data
+    
+
+class ComplaintForm(forms.ModelForm):
+    class Meta:
+        model = Complaint
+        fields = ['complaint_type', 'description']
+        widgets = {
+            'complaint_type': forms.Select(attrs={
+                'class': 'form-select',
+                'required': True,
+                'id': 'id_complaint_type'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-textarea',
+                'rows': 4,
+                'placeholder': 'Опишите подробнее причину жалобы...',
+                'id': 'id_description'
+            })
+        }
+        labels = {
+            'complaint_type': 'Тип жалобы',
+            'description': 'Дополнительная информация'
+        }

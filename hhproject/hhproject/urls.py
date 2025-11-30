@@ -11,7 +11,7 @@ urlpatterns = [
     path('compani/', include('compani.urls')),
     path('admin_panel/', include('admin_panel.urls')),
     path('prometheus/metrics', prometheus_metrics_view, name='prometheus-metric'),
-    
+    path('api/', include('api.urls')),
 ]
 
 if settings.DEBUG:

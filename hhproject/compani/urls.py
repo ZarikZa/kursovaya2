@@ -22,4 +22,7 @@ urlpatterns = [
     path('vacancy/<int:vacancy_id>/edit/', edit_vacancy, name='edit_vacancy'),
     path('employee/profile/', employee_profile, name='employee_profile'),
     path('employee/profile/edit/', edit_employee_profile, name='edit_employee_profile'),
+    path('delete/', delete_company_profile, name='delete_company_profile'),
+    path('hr-agents/export/', export_hr_agents_csv, name='export_hr_agents_csv'),
+    path('hr-agents/import/', import_hr_agents, name='import_hr_agents'),
 ]

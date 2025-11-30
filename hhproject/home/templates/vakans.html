@@ -3,11 +3,6 @@
 
 {% block title %}Вакансии - CareerHub{% endblock %}
 
-{% block style %}
-{% include '_inc/style_vakans.html' %}
-{% include '_inc/style.html' %}
-{% endblock %}
-
 {% block content %}
 <section class="vacancies-section">
     <div class="container">
@@ -15,18 +10,27 @@
             <div class="col-12">
                 <h1 class="display-5 fw-bold text-center mb-3">Найдите свою идеальную работу</h1>
                 <div class="search-box">
-                    <form method="get" action="{% url 'vakansi_page' %}">
-                        <div class="row g-2">
-                            <div class="col-md-8">
+                    <form method="get" action="{% url 'vakansi_page' %}" id="search-form">
+                       <div class="row g-2 align-items-center">
+                            <div class="col-md-10">
                                 <input type="text" name="search" class="form-control form-control-lg border-0" 
-                                       placeholder="Должность, ключевые слова или компания" 
-                                       value="{{ request.GET.search }}">
+                                    placeholder="Должность, ключевые слова или компания" 
+                                    value="{{ request.GET.search }}" id="search-input">
                             </div>
                             <div class="col-md-2">
-                                <button type="submit" class="btn btn-primary btn-lg w-100">Найти</button>
+                                <button type="submit" class="btn btn-primary btn-lg w-100" id="search-btn">Найти</button>
                             </div>
                         </div>
                     </form>
+                </div>
+                
+                <!-- Подсказка горячих клавиш -->
+                <div class="hotkeys-hint mt-3 text-center">
+                    <small class="text-muted">
+                        <strong>Горячие клавиши:</strong> 
+                        Alt+F - сброс фильтров, Alt+C - очистить поиск, Alt+S - сортировка, 
+                        Alt+H - справка, Alt+R - обновить, Alt+L - лайк, Alt+A - отклик
+                    </small>
                 </div>
             </div>
         </div>
@@ -37,13 +41,24 @@
                     <h5 class="mb-3">Фильтры</h5>
                     
                     <form method="get" action="{% url 'vakansi_page' %}" id="filter-form">
+                        {% if request.GET.search %}
+                            <input type="hidden" name="search" value="{{ request.GET.search }}">
+                        {% endif %}
+                        {% if request.GET.sort %}
+                            <input type="hidden" name="sort" value="{{ request.GET.sort }}">
+                        {% endif %}
+                        
                         <div class="mb-4">
                             <h6>Тип занятости</h6>
                             {% for condition in work_conditions %}
                             <div class="form-check">
-                                <input class="form-check-input employment-filter" type="checkbox" name="employment" value="{{ condition.work_conditions_name }}" 
+                                <input class="form-check-input employment-filter" type="checkbox" 
+                                       name="employment" value="{{ condition.work_conditions_name }}" 
+                                       id="emp_{{ forloop.counter }}"
                                        {% if condition.work_conditions_name in selected_employments %}checked{% endif %}>
-                                <label class="form-check-label" for="id_{{ condition.work_conditions_name }}">{{ condition.work_conditions_name }}</label>
+                                <label class="form-check-label" for="emp_{{ forloop.counter }}">
+                                    {{ condition.work_conditions_name }}
+                                </label>
                             </div>
                             {% endfor %}
                         </div>
@@ -51,19 +66,22 @@
                         <div class="mb-4">
                             <h6>Опыт работы</h6>
                             <div class="form-check">
-                                <input class="form-check-input experience-filter" type="checkbox" name="experience" value="Без опыта" 
+                                <input class="form-check-input experience-filter" type="checkbox" 
+                                       name="experience" value="Без опыта" id="exp_no"
                                        {% if 'Без опыта' in selected_experiences %}checked{% endif %}>
-                                <label class="form-check-label" for="id_noExp">Без опыта</label>
+                                <label class="form-check-label" for="exp_no">Без опыта</label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input experience-filter" type="checkbox" name="experience" value="1-3 года" 
+                                <input class="form-check-input experience-filter" type="checkbox" 
+                                       name="experience" value="1-3 года" id="exp_1-3"
                                        {% if '1-3 года' in selected_experiences %}checked{% endif %}>
-                                <label class="form-check-label" for="id_1-3years">1-3 года</label>
+                                <label class="form-check-label" for="exp_1-3">1-3 года</label>
                             </div>
                             <div class="form-check">
-                                <input class="form-check-input experience-filter" type="checkbox" name="experience" value="3-6 лет" 
+                                <input class="form-check-input experience-filter" type="checkbox" 
+                                       name="experience" value="3-6 лет" id="exp_3-6"
                                        {% if '3-6 лет' in selected_experiences %}checked{% endif %}>
-                                <label class="form-check-label" for="id_3-6years">3-6 лет</label>
+                                <label class="form-check-label" for="exp_3-6">3-6 лет</label>
                             </div>
                         </div>
 
@@ -71,12 +89,12 @@
                             <h6>Зарплата, ₽</h6>
                             <div class="row g-2">
                                 <div class="col-6">
-                                    <input type="number" class="form-control" name="salary_from" placeholder="От" 
-                                           value="{{ salary_from }}">
+                                    <input type="number" class="form-control" name="salary_from" 
+                                           placeholder="От" value="{{ salary_from }}" id="salary-from">
                                 </div>
                                 <div class="col-6">
-                                    <input type="number" class="form-control" name="salary_to" placeholder="До" 
-                                           value="{{ salary_to }}">
+                                    <input type="number" class="form-control" name="salary_to" 
+                                           placeholder="До" value="{{ salary_to }}" id="salary-to">
                                 </div>
                             </div>
                         </div>
@@ -94,10 +112,10 @@
                             <span class="text-muted">Найдено вакансий: <strong>{{ page_obj.paginator.count }}</strong></span>
                         </div>
                         <div class="col-md-6 text-end">
-                            <select class="form-select" onchange="location = this.value;" style="width: auto; display: inline-block;">
-                                <option value="?sort=newest" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>Сначала новые</option>
-                                <option value="?sort=salary_high" {% if request.GET.sort == 'salary_high' %}selected{% endif %}>По убыванию зарплаты</option>
-                                <option value="?sort=salary_low" {% if request.GET.sort == 'salary_low' %}selected{% endif %}>По возрастанию зарплаты</option>
+                            <select class="form-select" id="sort-select" style="width: auto; display: inline-block;">
+                                <option value="newest" {% if request.GET.sort == 'newest' or not request.GET.sort %}selected{% endif %}>Сначала новые</option>
+                                <option value="salary_high" {% if request.GET.sort == 'salary_high' %}selected{% endif %}>По убыванию зарплаты</option>
+                                <option value="salary_low" {% if request.GET.sort == 'salary_low' %}selected{% endif %}>По возрастанию зарплаты</option>
                             </select>
                         </div>
                     </div>
@@ -105,32 +123,50 @@
 
                 <div id="vacanciesList">
                     {% for vacancy in page_obj %}
-                    <div class="vacancy-card">
+                    <div class="vacancy-card" data-vacancy-id="{{ vacancy.id }}">
                         <div class="row align-items-center">
                             <div class="col-md-8">
                                 <a href="{% url 'vacancy_detail' vacancy.id %}" class="vacancy-title-link">
                                     <h3 class="vacancy-title">{{ vacancy.position|default:'Нет позиции' }}</h3>
                                 </a>
                                 <p class="company-name mb-2">{{ vacancy.company.name|default:'Нет компании' }}</p>
-                                <div class="d-flex flex-wrap gap-2 mb-2">
-                                    <span class="badge bg-primary">{{ vacancy.work_conditions.work_conditions_name|default:'Нет типа занятости' }}</span>
-                                    <span class="badge bg-secondary">1-3 года</span>
-                                    {% if vacancy.work_conditions.work_conditions_name == 'Удаленная работа' %}
-                                    <span class="badge badge-remote">Удаленно</span>
+                                
+                                <div class="vacancy-meta">
+                                    <div class="vacancy-info">
+                                        <i class="fas fa-briefcase"></i>
+                                        {{ vacancy.work_conditions.work_conditions_name|default:'Не указано' }}
+                                    </div>
+                                    <div class="vacancy-info">
+                                        <i class="fas fa-clock"></i>
+                                        Полный день
+                                    </div>
+                                    {% if vacancy.work_format == 'remote' %}
+                                    <div class="vacancy-remote">
+                                        <i class="fas fa-home"></i> Удаленно
+                                    </div>
                                     {% endif %}
                                 </div>
-                                <p class="text-muted mb-0">{{ vacancy.description|truncatewords:20|default:'Нет описания' }}</p>
+                                
+                                <p class="vacancy-description">{{ vacancy.description|truncatewords:25|default:'Нет описания' }}</p>
                             </div>
                             <div class="col-md-4 text-end">
                                 <div class="salary mb-2">{{ vacancy.salary_min|default:0 }} - {{ vacancy.salary_max|default:0 }} ₽</div>
-                                <small class="text-muted d-block">Опубликовано {{ vacancy.created_date|date:"d.m.Y"|default:'Нет даты' }}</small>
-                                <div class="mt-2">
-                                    <span class="me-2">Просмотров: {{ vacancy.views }}</span>
+                                
+                                <div class="vacancy-stats">
+                                    <div class="vacancy-views">
+                                        <i class="fas fa-eye"></i> {{ vacancy.views }} просмотров
+                                    </div>
+                                    <div class="vacancy-date">
+                                        <i class="fas fa-calendar"></i> {{ vacancy.created_date|date:"d.m.Y"|default:'Нет даты' }}
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
                                     {% if user.is_authenticated and user.user_type == 'applicant' %}
                                         {% if vacancy.has_response %}
                                             <button class="btn btn-success" disabled>Отклик отправлен</button>
                                         {% else %}
-                                            <a href="{% url 'apply_to_vacancy' vacancy.id %}" class="btn btn-primary">Откликнуться</a>
+                                            <a href="{% url 'apply_to_vacancy' vacancy.id %}" class="btn btn-primary apply-btn">Откликнуться</a>
                                         {% endif %}
                                     {% elif not user.is_authenticated %}
                                         <a href="{% url 'login_user' %}?next={{ request.path }}" class="btn btn-primary">Откликнуться</a>
@@ -138,11 +174,11 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div>  
                     {% empty %}
                     <div class="text-center py-5">
                         <h4>😔 Вакансий не найдено</h4>
-                        <p class="text-muted">Проверь фильтры или добавь вакансии</p>
+                        <p class="text-muted">Проверь фильтры</p>
                     </div>
                     {% endfor %}
                 </div>
@@ -152,7 +188,7 @@
                     <ul class="pagination justify-content-center">
                         {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Назад</a>
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Назад</a>
                         </li>
                         {% else %}
                         <li class="page-item disabled">
@@ -167,14 +203,14 @@
                             </li>
                             {% else %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ i }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">{{ i }}</a>
+                                <a class="page-link" href="?page={{ i }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a>
                             </li>
                             {% endif %}
                         {% endfor %}
 
                         {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}">Вперед</a>
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Вперед</a>
                         </li>
                         {% else %}
                         <li class="page-item disabled">
@@ -189,10 +225,394 @@
     </div>
 </section>
 
+<!-- Кнопка помощи -->
+<div class="hotkeys-help-btn" onclick="showHotkeysHelp()">
+    <i class="fas fa-keyboard"></i>
+</div>
+
+<!-- Модальное окно помощи -->
+<div id="hotkeysModal" class="hotkeys-modal" style="display: none;">
+    <div class="hotkeys-modal-content">
+        <div class="hotkeys-modal-header">
+            <h5>Горячие клавиши - Вакансии</h5>
+            <button type="button" onclick="hideHotkeysHelp()">×</button>
+        </div>
+        <div class="hotkeys-modal-body">
+            <div class="hotkey-item">
+                <kbd>Alt</kbd> + <kbd>F</kbd> - Сбросить все фильтры
+            </div>
+            <div class="hotkey-item">
+                <kbd>Alt</kbd> + <kbd>C</kbd> - Очистить поиск
+            </div>
+            <div class="hotkey-item">
+                <kbd>Alt</kbd> + <kbd>S</kbd> - Переключить сортировку
+            </div>
+            <div class="hotkey-item">
+                <kbd>Alt</kbd> + <kbd>R</kbd> - Обновить страницу
+            </div>
+            <div class="hotkey-item">
+                <kbd>Alt</kbd> + <kbd>L</kbd> - Лайкнуть вакансию (первую в списке)
+            </div>
+            <div class="hotkey-item">
+                <kbd>Alt</kbd> + <kbd>A</kbd> - Откликнуться на вакансию (первую в списке)
+            </div>
+            <div class="hotkey-item">
+                <kbd>Enter</kbd> - Выполнить поиск (в поле поиска)
+            </div>
+            <div class="hotkey-item">
+                <kbd>Alt</kbd> + <kbd>H</kbd> - Показать эту справку
+            </div>
+        </div>
+        <div class="hotkeys-modal-footer">
+            <button type="button" class="btn btn-primary" onclick="hideHotkeysHelp()">Закрыть</button>
+        </div>
+    </div>
+</div>
+
 <script>
-function resetFilters() {
-    document.getElementById('filter-form').reset();
-    window.location.href = "{% url 'vakansi_page' %}";
+// Отладочная информация
+console.log('=== HOTKEYS DEBUG ===');
+console.log('Script loaded on vacancies page');
+
+let currentVacancyIndex = 0;
+
+// Горячие клавиши для страницы вакансий
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, setting up hotkeys...');
+    
+    // Обработчик горячих клавиш
+    document.addEventListener('keydown', function(e) {
+        console.log('Key pressed:', {
+            key: e.key,
+            code: e.code,
+            altKey: e.altKey,
+            ctrlKey: e.ctrlKey,
+            shiftKey: e.shiftKey,
+            target: e.target.tagName,
+            targetId: e.target.id
+        });
+
+        // Пропускаем если в поле ввода (кроме Enter для поиска)
+        if ((e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') && e.key !== 'Enter') {
+            console.log('Skipping - in input field');
+            return;
+        }
+
+        // Enter для поиска работает без Alt
+        if (e.key === 'Enter' && e.target.id === 'search-input') {
+            console.log('Enter pressed in search, submitting form');
+            e.preventDefault();
+            document.getElementById('search-form').submit();
+            return;
+        }
+
+        // Работает только с Alt
+        if (!e.altKey) {
+            console.log('Skipping - Alt key not pressed');
+            return;
+        }
+
+        console.log('Alt key pressed, processing hotkey:', e.key);
+        e.preventDefault();
+
+        // Обработка сочетаний клавиш с Alt
+        switch(e.key.toLowerCase()) {
+            case 'f': // Сброс фильтров
+                console.log('Alt+F - Resetting filters');
+                resetFilters();
+                break;
+                
+            case 'c': // Очистка поиска
+                console.log('Alt+C - Clearing search');
+                clearSearch();
+                break;
+                
+            case 's': // Сортировка
+                console.log('Alt+S - Toggling sort');
+                toggleSort();
+                break;
+                
+            case 'r': // Обновить страницу
+                console.log('Alt+R - Refreshing page');
+                location.reload();
+                break;
+                
+            case 'l': // Лайкнуть вакансию
+                console.log('Alt+L - Liking vacancy');
+                likeFirstVacancy();
+                break;
+                
+            case 'a': // Откликнуться на вакансию
+                console.log('Alt+A - Applying to vacancy');
+                applyToFirstVacancy();
+                break;
+                
+            case 'h': // Справка
+                console.log('Alt+H - Showing help');
+                showHotkeysHelp();
+                break;
+                
+            default:
+                console.log('Unknown hotkey:', e.key);
+        }
+    });
+});
+
+// Сортировка
+const sortSelect = document.getElementById('sort-select');
+if (sortSelect) {
+    sortSelect.addEventListener('change', function() {
+        console.log('Sort changed to:', this.value);
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('sort', this.value);
+        window.location.href = '?' + urlParams.toString();
+    });
 }
+
+// Сброс фильтров
+function resetFilters() {
+    console.log('resetFilters function called');
+    const baseUrl = "{% url 'vakansi_page' %}";
+    const params = new URLSearchParams();
+    
+    // Сохраняем только поиск и сортировку если есть
+    {% if request.GET.search %}
+        params.set('search', '{{ request.GET.search }}');
+    {% endif %}
+    {% if request.GET.sort %}
+        params.set('sort', '{{ request.GET.sort %}');
+    {% endif %}
+    
+    const newUrl = baseUrl + (params.toString() ? '?' + params.toString() : '');
+    console.log('Redirecting to:', newUrl);
+    window.location.href = newUrl;
+}
+
+// Очистка поиска
+function clearSearch() {
+    console.log('clearSearch function called');
+    const baseUrl = "{% url 'vakansi_page' %}";
+    const params = new URLSearchParams();
+    
+    // Сохраняем только сортировку если есть
+    {% if request.GET.sort %}
+        params.set('sort', '{{ request.GET.sort %}');
+    {% endif %}
+    
+    const newUrl = baseUrl + (params.toString() ? '?' + params.toString() : '');
+    console.log('Redirecting to:', newUrl);
+    window.location.href = newUrl;
+}
+
+// Переключение сортировки
+function toggleSort() {
+    console.log('toggleSort function called');
+    const currentSort = "{{ request.GET.sort|default:'newest' }}";
+    console.log('Current sort:', currentSort);
+    
+    let newSort;
+    switch(currentSort) {
+        case 'newest':
+            newSort = 'salary_high';
+            break;
+        case 'salary_high':
+            newSort = 'salary_low';
+            break;
+        case 'salary_low':
+            newSort = 'newest';
+            break;
+        default:
+            newSort = 'salary_high';
+    }
+    
+    console.log('New sort:', newSort);
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('sort', newSort);
+    const newUrl = '?' + urlParams.toString();
+    console.log('Redirecting to:', newUrl);
+    window.location.href = newUrl;
+}
+
+// Лайкнуть первую вакансию
+function likeFirstVacancy() {
+    const likeBtn = document.querySelector('.like-btn');
+    if (likeBtn) {
+        console.log('Liking vacancy:', likeBtn.dataset.vacancyId);
+        likeBtn.click();
+        showNotification('Вакансия добавлена в избранное!', 'success');
+    } else {
+        showNotification('Нет вакансий для лайка', 'warning');
+    }
+}
+
+// Откликнуться на первую вакансию
+function applyToFirstVacancy() {
+    const applyBtn = document.querySelector('.apply-btn');
+    if (applyBtn) {
+        console.log('Applying to vacancy via:', applyBtn.href);
+        window.location.href = applyBtn.href;
+    } else {
+        showNotification('Нет доступных вакансий для отклика', 'warning');
+    }
+}
+
+// Показать уведомление
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} position-fixed`;
+    notification.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+    `;
+    notification.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 3000);
+}
+
+// Функции для модального окна
+function showHotkeysHelp() {
+    console.log('Showing hotkeys help');
+    document.getElementById('hotkeysModal').style.display = 'flex';
+}
+
+function hideHotkeysHelp() {
+    console.log('Hiding hotkeys help');
+    document.getElementById('hotkeysModal').style.display = 'none';
+}
+
+// Закрытие по клику вне окна
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('hotkeysModal');
+    if (e.target === modal) {
+        hideHotkeysHelp();
+    }
+});
+
+console.log('Hotkeys setup complete');
 </script>
+
+<style>
+.hotkeys-help-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+    z-index: 1000;
+    border: none;
+    transition: all 0.3s ease;
+}
+
+.hotkeys-help-btn:hover {
+    background: #0056b3;
+    transform: scale(1.1);
+}
+
+.hotkeys-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.hotkeys-modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.hotkeys-modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hotkeys-modal-header h5 {
+    margin: 0;
+}
+
+.hotkeys-modal-header button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #6c757d;
+}
+
+.hotkeys-modal-body {
+    padding: 20px;
+}
+
+.hotkeys-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dee2e6;
+    text-align: right;
+}
+
+.hotkey-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+}
+
+.hotkey-item:last-child {
+    border-bottom: none;
+}
+
+kbd {
+    background: #6c757d;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    margin-right: 8px;
+    min-width: 40px;
+    display: inline-block;
+    text-align: center;
+    font-size: 14px;
+}
+
+.hotkeys-hint {
+    background: #f8f9fa;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 10px;
+}
+
+.like-btn {
+    margin-left: 10px;
+}
+</style>
 {% endblock %}

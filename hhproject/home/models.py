@@ -135,7 +135,7 @@ class Employee(models.Model):
         verbose_name_plural = 'Сотрудники'
     
     def __str__(self):
-        return f"{self.first_name} {self.last_name} ({self.role})"
+        return f"{self.first_name} {self.last_name}"
 
 class WorkConditions(models.Model):
     work_conditions_name = models.CharField(max_length=50)
@@ -203,6 +203,48 @@ class Vacancy(models.Model):
     
     def __str__(self):
         return f"{self.position} - {self.company.name}"
+    
+    
+from django.utils import timezone
+class Complaint(models.Model):
+    COMPLAINT_TYPES = [
+        ('spam', 'Спам'),
+        ('fraud', 'Мошенничество'),
+        ('inappropriate', 'Неуместный контент'),
+        ('discrimination', 'Дискриминация'),
+        ('false_info', 'Ложная информация'),
+        ('other', 'Другое'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('pending', 'На рассмотрении'),
+        ('reviewed', 'Рассмотрено'),
+        ('rejected', 'Отклонено'),
+        ('resolved', 'Решено'),
+    ]
+    
+    vacancy = models.ForeignKey(Vacancy, on_delete=models.CASCADE, verbose_name="Вакансия")
+    complainant = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Подавший жалобу")
+    complaint_type = models.CharField(max_length=50, choices=COMPLAINT_TYPES, verbose_name="Тип жалобы")
+    description = models.TextField(verbose_name="Описание проблемы", blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Статус")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    resolved_at = models.DateTimeField(null=True, blank=True, verbose_name="Дата решения")
+    admin_notes = models.TextField(blank=True, verbose_name="Заметки администратора")
+    
+    class Meta:
+        db_table = 'complaints'
+        verbose_name = 'Жалоба'
+        verbose_name_plural = 'Жалобы'
+        unique_together = ['vacancy', 'complainant'] 
+    
+    def __str__(self):
+        return f"Жалоба на {self.vacancy.position} от {self.complainant.email}"
+    
+    def save(self, *args, **kwargs):
+        if self.status != 'pending' and not self.resolved_at:
+            self.resolved_at = timezone.now()
+        super().save(*args, **kwargs)
 
 class Response(models.Model):
     applicants = models.ForeignKey(Applicant, on_delete=models.CASCADE)
@@ -232,33 +274,38 @@ class Favorites(models.Model):
     
     def __str__(self):
         return f"{self.applicant} - {self.vacancy}"
-
-class AdminLog(models.Model):
-    ACTION_CHOICES = [
-        ('company_approved', 'Компания одобрена'),
-        ('company_rejected', 'Компания отклонена'),
-        ('company_updated', 'Компания обновлена'),
-        ('backup_created', 'Создан бэкап'),
-        ('backup_restored', 'Бэкап восстановлен'),
-        ('backup_deleted', 'Бэкап удален'),
-        ('backup_downloaded', 'Бэкап скачан'),
-        ('backup_uploaded', 'Бэкап загружен'),
-        ('logs_cleared', 'Логи очищены'),
-    ]
     
-    admin = models.ForeignKey(User, on_delete=models.CASCADE)
-    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
-    target_company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
-    details = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+class ActionType(models.Model):
+    """Типы действий для логирования"""
+    code = models.CharField(max_length=50, unique=True, verbose_name='Код действия')
+    name = models.CharField(max_length=100, verbose_name='Название действия')
+    description = models.TextField(blank=True, verbose_name='Описание')
     
     class Meta:
-        verbose_name = 'Лог администратора'
-        verbose_name_plural = 'Логи администраторов'
+        verbose_name = 'Тип действия'
+        verbose_name_plural = 'Типы действий'
+    
+    def __str__(self):
+        return self.name
+
+class AdminLog(models.Model):
+    admin = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='Пользователь')
+    action = models.ForeignKey(ActionType, on_delete=models.CASCADE, verbose_name='Действие')
+    target_company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True, verbose_name='Целевая компания')
+    target_object_id = models.PositiveIntegerField(null=True, blank=True, verbose_name='ID целевого объекта')
+    target_content_type = models.CharField(max_length=100, blank=True, verbose_name='Тип целевого объекта')
+    details = models.TextField(blank=True, verbose_name='Детали')
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name='IP-адрес')
+    user_agent = models.TextField(blank=True, verbose_name='User Agent')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
+    
+    class Meta:
+        verbose_name = 'Лог действий'
+        verbose_name_plural = 'Логи действий'
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.admin.username} - {self.get_action_display()} - {self.created_at}"
+        return f"{self.admin.username} - {self.action.name} - {self.created_at}"
 
 class Backup(models.Model):
     BACKUP_TYPES = [
